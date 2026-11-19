@@ -107,7 +107,7 @@ def usage(run: Run) -> dict:
         agg[key]["calls"] += 1
         agg[key]["input_tokens"] += r.get("input_tokens", 0)
         agg[key]["output_tokens"] += r.get("output_tokens", 0)
-    lite = ROOT / "runs" / "litellm_usage.jsonl"
+    lite = run.dir / "tdam_internal_usage.jsonl"   # fetched from the TDAM host via deploy/tdam/usage_summary.py
     if lite.exists():
         for line in lite.read_text().splitlines():
             r = json.loads(line)
