@@ -46,3 +46,10 @@ def test_parse_verdicts():
     assert parse_yes("Yes. The response recalls")
     assert not parse_yes("")
     assert parse_yes("The rubric is met, so the answer is yes")
+
+
+def test_temporal_sensitivity():
+    from memeva.report import temporal_sensitivity
+    rows = [{"category": "temporal", "gold": "2025-02-23（2月23日）", "answer": "是 2025年2月16日"},
+            {"category": "temporal", "gold": "2025-03-27（3月27日）", "answer": "3月27日"}]
+    assert temporal_sensitivity(rows) == {"n": 2, "gold_date": 1, "gold_minus_7d": 1, "either": 2}

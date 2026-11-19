@@ -10,6 +10,36 @@ from .pipeline import Run
 from .stats import mcnemar_exact, pct, wilson
 
 
+def _dates(text: str, year_hint: int) -> set:
+    import re
+    from datetime import date
+    out = set()
+    for y, m, d in re.findall(r"(20\d\d)[-/年](\d{1,2})[-/月](\d{1,2})", text):
+        out.add(date(int(y), int(m), int(d)))
+    for m, d in re.findall(r"(?<![\d年-])(\d{1,2})月(\d{1,2})[日号]", text):
+        try:
+            out.add(date(year_hint, int(m), int(d)))
+        except ValueError:
+            pass
+    return out
+
+
+def temporal_sensitivity(rows: list[dict]) -> dict:
+    """web3_zh temporal questions: count answers naming the gold date, or exactly 7 days earlier
+    ("下周X" read as "this coming X"). Deterministic, judge-free."""
+    from datetime import date, timedelta
+    ok = week_early = n = 0
+    for r in rows:
+        if r["category"] != "temporal":
+            continue
+        n += 1
+        g = date.fromisoformat(r["gold"][:10])
+        ds = _dates(r["answer"], g.year)
+        ok += g in ds
+        week_early += (g - timedelta(days=7)) in ds and g not in ds
+    return {"n": n, "gold_date": ok, "gold_minus_7d": week_early, "either": ok + week_early}
+
+
 def _f(x, nd=1):
     return "—" if x is None or x != x else f"{x:.{nd}f}"
 
@@ -29,6 +59,8 @@ def summarize(run: Run, arms: list[str]) -> dict:
                           "fact_coverage_4k": sum(cov) / len(cov) if cov else None,
                           "context_tokens_mean": sum(r["context_tokens"] for r in rs) / n,
                           "retrieval_p50": pct(lat, .5) if lat else None, "retrieval_p95": pct(lat, .95) if lat else None}
+        if run.dataset == "web3_zh":
+            rep["arms"][a]["temporal_sensitivity"] = temporal_sensitivity(rs)
         rep["by_category"][a] = {}
         for c in cats:
             cr = [r for r in rs if r["category"] == c]
@@ -127,6 +159,11 @@ def markdown(rep: dict, cats: list[str]) -> str:
     L += ["", "## By category", "", "| arm | " + " | ".join(cats) + " |", "|---|" + "---:|" * len(cats)]
     for a, bc in rep["by_category"].items():
         L.append(f"| {a} | " + " | ".join(f"{bc[c]['correct']}/{bc[c]['n']}" for c in cats) + " |")
+    ts = {a: s.get("temporal_sensitivity") for a, s in rep["arms"].items() if s.get("temporal_sensitivity")}
+    if ts:
+        L += ["", "## Temporal sensitivity (deterministic date match)", "", "| arm | n | gold date | gold−7d (\"下周X\" read as nearest X) | either |", "|---|---:|---:|---:|---:|"]
+        for a, t in ts.items():
+            L.append(f"| {a} | {t['n']} | {t['gold_date']} | {t['gold_minus_7d']} | {t['either']} |")
     if rep["pairwise"]:
         L += ["", "## Paired comparison (exact McNemar)", ""]
         for k, v in rep["pairwise"].items():
