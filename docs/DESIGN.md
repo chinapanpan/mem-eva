@@ -64,3 +64,6 @@ runner 和 TDAM 分别部署在两台 EC2 上（`deploy/aws/stack.yaml`）。TDA
 | Smoke 1 | 发现 L2/L3 由同一 team+agent 下的所有用户共享：给每个用户一个 team，新增 D6c 测试 |
 | Smoke 2 | 不传 `team_id` 会回落到 `default`，仍然共享：改成 `team_id = user_id`；等待时间改为 ≥900 秒 |
 | Runner | 两个并发进程重复写入 TDAM（TDAM 写入不幂等）：清空后重新写入，checkpoint 改成多进程安全 |
+| 正式运行 | TDAM 主机重启后，LiteLLM 密钥失配，抽取全部静默失败：start.sh 改为持久化密钥并做自检，就绪门检测到零记忆时直接报错 |
+| 正式运行 | Judge（Sonnet 5.5）先写推理再给结论，max_tokens=10 被截断判成 no：改为最后一行输出 VERDICT、400 tokens，并对已有回答 rejudge |
+| 正式运行 | AgentCore 检索在并发 ≥8 时触发默认 30 TPS 配额：新增单次分层检索 `agentcore_path` arm |

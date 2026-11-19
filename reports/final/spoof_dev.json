@@ -1,0 +1,43 @@
+{
+  "tdam": {
+    "caller": "client holding gateway Bearer key (intended for tenant A)",
+    "request": "atomic/search with user_id=smoke-w3u001",
+    "records_returned": 12,
+    "cross_tenant_read_possible": true
+  },
+  "agentcore": {
+    "policy_condition": {
+      "StringLike": {
+        "bedrock-agentcore:namespace": "/u/smoke-w3u000/*"
+      }
+    },
+    "namespace": {
+      "own_tenant": {
+        "allowed": true,
+        "records": 5
+      },
+      "other_tenant": {
+        "allowed": false,
+        "error": "AccessDeniedException",
+        "message": "the RetrieveMemoryRecords operation: User: arn:aws:sts::<account-id>:assumed-role/memeva-tenant-scope-probe/tenant-a is not authorized to perform this operation"
+      }
+    },
+    "namespacePath": {
+      "own_tenant": {
+        "allowed": false,
+        "error": "AccessDeniedException",
+        "message": "the RetrieveMemoryRecords operation: User: arn:aws:sts::<account-id>:assumed-role/memeva-tenant-scope-probe/tenant-a is not authorized to perform this operation"
+      },
+      "other_tenant": {
+        "allowed": false,
+        "error": "AccessDeniedException",
+        "message": "the RetrieveMemoryRecords operation: User: arn:aws:sts::<account-id>:assumed-role/memeva-tenant-scope-probe/tenant-a is not authorized to perform this operation"
+      }
+    },
+    "cross_tenant_read_possible": false,
+    "own_tenant_allowed": {
+      "namespace": true,
+      "namespacePath": false
+    }
+  }
+}
