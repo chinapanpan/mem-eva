@@ -1,0 +1,17 @@
+# OpenAI-compatible gateway in front of Amazon Bedrock, used ONLY as TDAM's internal LLM/embedding provider.
+# Credentials come from the instance role (no keys in files).
+model_list:
+  - model_name: tdam-llm
+    litellm_params:
+      model: bedrock/us.anthropic.claude-haiku-5-5
+      aws_region_name: us-east-1
+  - model_name: tdam-embed
+    litellm_params:
+      model: bedrock/amazon.titan-embed-text-v2:0
+      aws_region_name: us-east-1
+litellm_settings:
+  drop_params: true
+  request_timeout: 300
+  callbacks: usage_logger.proxy_handler_instance
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY

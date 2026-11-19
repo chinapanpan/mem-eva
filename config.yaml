@@ -1,0 +1,62 @@
+# mem-eva configuration. Override any key with env MEMEVA_<UPPER_KEY> or a second YAML via --config.
+region: us-east-1
+
+# Models (Amazon Bedrock inference profiles)
+answer_model: us.anthropic.claude-haiku-5-5
+judge_model: us.anthropic.claude-sonnet-5-5
+generator_model: us.anthropic.claude-sonnet-5-5   # only used by scripts/gen_web3_dataset.py
+
+memory_tokens: 4096        # context budget handed to the answer model (cl100k_base tokens)
+top_k: 50                  # candidates per retrieval call
+workers: 4                 # parallel questions during evaluate
+
+arms: [none, tdam_full, tdam_l1, agentcore_spu]
+
+tdam:
+  url: http://127.0.0.1:8420
+  api_key_env: TDAM_API_KEY          # Bearer key (TDAI_GATEWAY_API_KEY on the server)
+  service_id: mem-eva                # x-tdai-service-id (instance)
+  team_id: null                      # null = personal scope (L2/L3 per user). Set a value to test team-shared scope.
+  agent_id: assistant
+  max_chars_per_message: 8000        # API limit is 8192 chars
+  # readiness: wait at least l1IdleTimeoutSeconds after the last write, then until pipeline idle + counts stable
+  min_wait_seconds: 660
+  max_wait_seconds: 3600
+  stable_polls: 3
+  poll_seconds: 30
+
+agentcore:
+  memory_name_prefix: memeva
+  event_expiry_days: 7
+  ingest_tokens_per_minute: 100000   # client-side pacing below the default LTM extraction quota
+  min_wait_seconds: 300
+  max_wait_seconds: 2400
+  stable_polls: 3
+  poll_seconds: 30
+
+datasets:
+  web3_zh: data/web3_zh/dataset.json
+  lme:
+    url: https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned/resolve/98d7416c24c778c2fee6e6f3006e7a073259d48f/longmemeval_s_cleaned.json
+    path: .cache/longmemeval_s_cleaned.json
+    samples_per_category: 1
+    seed: 20261119
+
+perf:
+  concurrency: [1, 8, 32]
+  seconds_per_level: 45
+  warmup_requests: 10
+
+# Public on-demand prices (USD), us-east-1, retrieved 2026-11-19 via AWS Price List API / AgentCore pricing page.
+# Used only for cost estimates in reports; edit to match your contract.
+pricing:
+  tokens_per_million:            # [input, output]
+    us.anthropic.claude-haiku-5-5: [0.11, 0.55]
+    us.anthropic.claude-sonnet-5-5: [2.20, 11.00]
+    tdam-llm: [0.11, 0.55]       # TDAM internal LLM = Haiku 5.5 via LiteLLM
+    tdam-embed: [0.02, 0.0]      # Titan Text Embeddings V2
+  agentcore:
+    stm_ingest_per_gb: 1.00      # each event billed min 12 KB, max 64 KB
+    stm_storage_per_gb_month: 0.10
+    ltm_records_per_1000_month: 0.75
+    ltm_retrievals_per_1000: 0.50

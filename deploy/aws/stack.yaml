@@ -1,0 +1,94 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  mem-eva benchmark environment: one runner EC2 (harness) + one TDAM EC2 (memory-core + LiteLLM->Bedrock).
+  No inbound from the internet; managed via SSM. TDAM port 8420 reachable only from the runner security group.
+
+Parameters:
+  VpcId: { Type: "AWS::EC2::VPC::Id" }
+  SubnetId: { Type: "AWS::EC2::Subnet::Id", Description: "Subnet with outbound internet (public IP or NAT)" }
+  RunnerInstanceType: { Type: String, Default: m7i.large }
+  TdamInstanceType: { Type: String, Default: m7i.xlarge }
+  AmiId:
+    Type: "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>"
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+
+Resources:
+  RunnerSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: mem-eva runner (egress only)
+      VpcId: !Ref VpcId
+      SecurityGroupEgress: [{ IpProtocol: "-1", CidrIp: 0.0.0.0/0 }]
+  TdamSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: mem-eva TDAM memory-core (8420 from runner only)
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - { IpProtocol: tcp, FromPort: 8420, ToPort: 8420, SourceSecurityGroupId: !Ref RunnerSG }
+      SecurityGroupEgress: [{ IpProtocol: "-1", CidrIp: 0.0.0.0/0 }]
+
+  Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement: [{ Effect: Allow, Principal: { Service: ec2.amazonaws.com }, Action: sts:AssumeRole }]
+      ManagedPolicyArns: [arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore]
+      Policies:
+        - PolicyName: memeva
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: [bedrock:InvokeModel, bedrock:InvokeModelWithResponseStream, bedrock:Converse]
+                Resource: "*"
+              - Effect: Allow
+                Action: ["bedrock-agentcore:*"]
+                Resource: !Sub "arn:aws:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:memory/memeva_*"
+              - Effect: Allow
+                Action: [bedrock-agentcore:CreateMemory, bedrock-agentcore:ListMemories, bedrock-agentcore:TagResource]
+                Resource: "*"
+              - Effect: Allow
+                Action: [ssm:SendCommand, ssm:GetCommandInvocation]
+                Resource: "*"
+  Profile:
+    Type: AWS::IAM::InstanceProfile
+    Properties: { Roles: [!Ref Role] }
+
+  Tdam:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref AmiId
+      InstanceType: !Ref TdamInstanceType
+      SubnetId: !Ref SubnetId
+      SecurityGroupIds: [!Ref TdamSG]
+      IamInstanceProfile: !Ref Profile
+      MetadataOptions: { HttpTokens: required, HttpPutResponseHopLimit: 2 }
+      BlockDeviceMappings: [{ DeviceName: /dev/xvda, Ebs: { VolumeSize: 40, VolumeType: gp3, Encrypted: true } }]
+      Tags: [{ Key: Name, Value: memeva-tdam }, { Key: ManagedBy, Value: mem-eva }]
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          dnf install -y docker git python3.12 python3.12-pip
+          systemctl enable --now docker
+  Runner:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref AmiId
+      InstanceType: !Ref RunnerInstanceType
+      SubnetId: !Ref SubnetId
+      SecurityGroupIds: [!Ref RunnerSG]
+      IamInstanceProfile: !Ref Profile
+      MetadataOptions: { HttpTokens: required }
+      BlockDeviceMappings: [{ DeviceName: /dev/xvda, Ebs: { VolumeSize: 30, VolumeType: gp3, Encrypted: true } }]
+      Tags: [{ Key: Name, Value: memeva-runner }, { Key: ManagedBy, Value: mem-eva }]
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          dnf install -y git python3.12 python3.12-pip
+
+Outputs:
+  RunnerId: { Value: !Ref Runner }
+  TdamId: { Value: !Ref Tdam }
+  TdamPrivateIp: { Value: !GetAtt Tdam.PrivateIp }
