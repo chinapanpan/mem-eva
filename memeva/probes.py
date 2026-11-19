@@ -154,7 +154,8 @@ def perf(run: Run, arms: list[str]) -> dict:
     p = run.cfg["perf"]
     data = run.data()
     pairs = [(run.ukey(u["user_id"]), q["question"]) for u in data["users"] for q in u["questions"]]
-    out = {}
+    prev = run.dir / "probes" / "perf.json"
+    out = json.loads(prev.read_text()) if prev.exists() else {}   # merge: re-running one arm keeps the others
     for arm in arms:
         be = run.backend(arm)
         for uk, q in pairs[: int(p["warmup_requests"])]:
