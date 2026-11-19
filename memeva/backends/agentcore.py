@@ -108,6 +108,7 @@ class AgentCoreBackend(Backend):
         self.pacer = Pacer(int(self.c["ingest_tokens_per_minute"]))
         self.pool = ThreadPoolExecutor(max_workers=96)
         self.journal = journal
+        self.single_call = False
 
     @staticmethod
     def actor(uid: str) -> str:
@@ -216,6 +217,20 @@ class AgentCoreBackend(Backend):
 
     def retrieve(self, user_id, query):
         uid = self.actor(user_id)
+        if self.single_call:
+            # one hierarchical call over /u/{actor}/ (all strategies ranked together): 1 API call per request
+            t0 = time.monotonic()
+            r = self.dp.retrieve_memory_records(memoryId=self.mid, namespacePath=f"/u/{uid}/",
+                                                searchCriteria={"searchQuery": query[:10000], "topK": self.top_k}, maxResults=100)
+            recs = []
+            for x in r.get("memoryRecordSummaries", []):
+                c = x.get("content", {})
+                ns = (x.get("namespaces") or [""])[0]
+                kind = next((k for k in STRATEGIES if f"/{k}/" in ns), "record")
+                ts = x.get("timestamp")
+                recs.append(Record(x["memoryRecordId"], c.get("text", "") if isinstance(c, dict) else str(c), kind, x.get("score"),
+                                   ts.strftime("%Y-%m-%d") if hasattr(ts, "strftime") else None))
+            return Retrieval(recs, time.monotonic() - t0, 1)
         t0 = time.monotonic()
         futs = [self.pool.submit(self._search, uid, k, query) for k in STRATEGIES]
         lists = [f.result() for f in futs]

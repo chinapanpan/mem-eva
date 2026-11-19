@@ -18,4 +18,9 @@ def make(arm: str, cfg: dict, journal=None) -> Backend:
     if arm == "agentcore_spu":
         from .agentcore import AgentCoreBackend
         return AgentCoreBackend(cfg, journal=journal)
+    if arm == "agentcore_path":
+        from .agentcore import AgentCoreBackend
+        be = AgentCoreBackend(cfg, journal=journal)
+        be.single_call, be.name = True, arm
+        return be
     raise ValueError(arm)
