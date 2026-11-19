@@ -324,7 +324,7 @@ TEAM_FACTS = [
 def tdam_team_scope(run: Run, team_id: str = "shared-team", n_users: int = 3, max_wait: int = 2400) -> dict:
     from .backends.tdam import TdamBackend
     cfg = dict(run.cfg)
-    cfg["tdam"] = dict(run.cfg["tdam"], team_id=f"{team_id}-{run.run}")
+    cfg["tdam"] = dict(run.cfg["tdam"], team_id=f"{team_id}-{run.run}")  # fixed team => shared-team topology
     be = TdamBackend(cfg, mode="full")
     users = []
     for i in range(n_users):

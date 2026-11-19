@@ -41,13 +41,11 @@ class TdamBackend(Backend):
 
     # ── low level ──
     def _iso(self, user_id: str) -> dict:
-        # team_id omitted (null) => TDAM "personal" scope: L2/L3 profile keyed by user_id
-        # (core/profile/profile-scope.ts: teamId || userId). With a team_id set, L2/L3 are shared by
-        # every user of that team+agent by design.
-        iso = {"agent_id": self.c["agent_id"], "user_id": user_id}
-        if self.c.get("team_id"):
-            iso["team_id"] = self.c["team_id"]
-        return iso
+        # TDAM v3 scopes L2 scenes / L3 persona by team+agent only (core/profile/profile-scope.ts); a missing
+        # team_id falls back to "default", i.e. still shared by every user. team_id "{user}" (default) gives
+        # every end user a private team => private L2/L3. A fixed team_id reproduces the shared-team topology.
+        team = self.c.get("team_id") or "{user}"
+        return {"team_id": user_id if team == "{user}" else team, "agent_id": self.c["agent_id"], "user_id": user_id}
 
     def post(self, path: str, body: dict, retries: int = 4) -> dict:
         for attempt in range(retries):

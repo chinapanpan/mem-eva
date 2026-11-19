@@ -16,14 +16,14 @@ tdam:
   url: http://127.0.0.1:8420
   api_key_env: TDAM_API_KEY          # Bearer key (TDAI_GATEWAY_API_KEY on the server)
   service_id: mem-eva                # x-tdai-service-id (instance)
-  team_id: null                      # null = personal scope (L2/L3 per user). Set a value to test team-shared scope.
+  team_id: "{user}"                  # "{user}" = one team per end user (private L2/L3). Fixed value = shared-team topology.
   agent_id: assistant
   max_chars_per_message: 8000        # API limit is 8192 chars
   # readiness: wait at least l1IdleTimeoutSeconds after the last write, then until pipeline idle + counts stable
-  min_wait_seconds: 660
+  min_wait_seconds: 900             # l1IdleTimeout 600s + l2DelayAfterL1 90s + scheduling margin
   max_wait_seconds: 3600
   stable_polls: 3
-  poll_seconds: 30
+  poll_seconds: 60
 
 agentcore:
   memory_name_prefix: memeva
