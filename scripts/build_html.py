@@ -35,7 +35,9 @@ DATA = {"acc": acc, "heat": heat, "perf": perf_series, "lag": lag, "lme": lme, "
         "secrets": {k: v.get("exact_secret_stored") for k, v in P.get("secrets", {}).items()},
         "iso": {k: [v.get("leaking_probes"), v.get("probes")] for k, v in P.get("isolation", {}).items()},
         "sharing": P.get("profile_sharing", []), "failover": P.get("failover", {}),
-        "cost": W.get("cost_estimate", {})}
+        "cost": W.get("cost_estimate", {}),
+        "write": {k.split("/")[1]: v.get("write_latency") for k, v in W.get("infra", {}).items()
+                  if k.startswith("ingest/") and k.split("/")[1] in ("tdam", "agentcore")}}
 
 HTML = r"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>mem-eva：TencentDB Agent Memory vs AgentCore Memory 评测</title>
@@ -78,10 +80,20 @@ details summary{cursor:pointer;color:var(--ink2);font-size:13px;margin-top:8px}a
 <h2>多租户、安全与删除</h2>
 <div class="card"><table id="sec"></table></div>
 
-<h2>写入→可检索 &amp; 检索性能</h2>
-<div class="card"><div class="legend" id="perfLeg"></div><svg id="perf" width="100%" height="280" role="img" aria-label="并发与 p95 时延"></svg>
-<p class="note">纵轴为 p95 检索时延（对数刻度）。AgentCore 在并发 ≥8 时受账户默认配额限制（RetrieveMemoryRecords 30 TPS，可申请提升）：SPU 每个请求调用 3 次 API，单次分层检索只调用 1 次。CloudWatch 在这些时间窗口记录到了 Throttles，boto3 adaptive 重试会在客户端降速，所以表现为高延迟、0 错误。提额后的表现本次未测。</p>
-<details><summary>数据表</summary><table id="perfT"></table></details></div>
+<h2>写入→可检索时延</h2>
+<div class="card"><p class="note" style="margin-top:0">口径：从最后一次写入调用返回开始计时，到用"我的邀请码是多少？"检索、结果中第一次出现该邀请码为止。只统计长期记忆（AgentCore 三种策略的记录 / TDAM 的 L1–L3）；原始对话两边写入后都能立即查到，不计入。6 个新用户，每 10 秒查一次（精度约 ±10 秒），最多等 30 分钟。</p>
+<table id="lagT"></table>
+<p class="note">写入调用本身的耗时（只是写接口返回所需的时间，不代表可检索）：</p><table id="writeT"></table>
+<p class="note">TDAM 的抽取器对这类对话（产品咨询中顺带让它记一个码）返回 <code>empty_scenes</code>，邀请码只停留在原始对话层；在主数据集上 TDAM 能正常抽取。TDAM 默认还要等 600 秒空闲超时才会处理最后几轮。</p></div>
+
+<h2>检索性能（只测检索调用本身）</h2>
+<div class="card"><p class="note" style="margin-top:0">口径：数据早已写入并抽取完成，压测只调用检索接口，计时从发出检索请求到收到结果。不包含写入、抽取和回答生成。closed-loop 压测，每个并发档位 45 秒，先预热；runner 和 TDAM 在同一 VPC 内，AgentCore 走同区域 API。</p>
+<div class="legend" id="perfLeg"></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:12px">
+<div><div class="note"><b>p50</b> 检索时延（对数刻度）</div><svg id="perf50" width="100%" height="250" role="img" aria-label="检索 p50 时延"></svg></div>
+<div><div class="note"><b>p95</b> 检索时延（对数刻度）</div><svg id="perf95" width="100%" height="250" role="img" aria-label="检索 p95 时延"></svg></div></div>
+<table id="perfT" style="margin-top:8px"></table>
+<p class="note">AgentCore 在并发 ≥8 时，CloudWatch 记录到 RetrieveMemoryRecords 的 Throttles：账户默认配额为 30 TPS（可申请提升），SPU 每个请求要调用 3 次 API。boto3 的 adaptive 重试会在客户端主动降速，所以表现为高延迟，没有报错。提额之后的表现本次未测。TDAM 是单节点 SQLite，32 并发时 0 错误。</p></div>
 
 <h2>成本（本次运行，按公开价格估算）</h2>
 <div class="card"><table id="cost"></table><p class="note">TDAM 还需另计 EC2 m7i.xlarge（$0.2016/小时，约 $147/月）、EBS、高可用副本和运维人力。</p></div>
@@ -98,7 +110,7 @@ const lagA=D.lag.agentcore||{},lagT=D.lag.tdam||{};
 document.getElementById('tiles').innerHTML=[
 ['AgentCore 正确率',pct(ac.p),`${ac.k}/${ac.n} · 4K 事实覆盖 ${pct(ac.cov)}`],
 ['TDAM 最佳 arm 正确率',pct(tb.p),`${tb.k}/${tb.n} · ${tb.label}`],
-['写入→可检索 p50（6 个用户）',`${(lagA.p50||0).toFixed(1)} s`,`AgentCore ${lagA.ready}/${lagA.n}（p95 ${(lagA.p95||0).toFixed(0)}s）；TDAM 30 分钟内 ${lagT.ready}/${lagT.n}`],
+['写入完成→可检索 p50（6 个用户）',`${(lagA.p50||0).toFixed(1)} s`,`AgentCore ${lagA.ready}/${lagA.n}（p95 ${(lagA.p95||0).toFixed(0)}s）；TDAM 30 分钟内 ${lagT.ready}/${lagT.n}`],
 ['密钥进入长期记忆',`${D.secrets.agentcore}/30`,`AgentCore（需要脱敏）；TDAM ${D.secrets.tdam}/30`]].map(t=>`<div class="card tile"><div class="k">${t[0]}</div><div class="v">${t[1]}</div><div class="d">${t[2]}</div></div>`).join('');
 // accuracy bars with CI
 (function(){const s=document.getElementById('acc'),w=s.clientWidth||900,lw=230,rw=w-lw-60,bh=22,gap=14,top=10;s.setAttribute('height',top+D.acc.length*(bh+gap)+26);
@@ -127,21 +139,24 @@ const sh=(D.sharing||[]).find(x=>x.arm==='tdam_shared_full')||{};const rows=[
 ['写入重试是否幂等',B(false,'否（实测出现过重复写入）'),B(true,'是（clientToken）')],
 ['容器重启 / 节点故障',B('mid',`重启时 ${D.failover.failed}/${D.failover.requests} 失败，数据无丢失；单机，高可用需自建`),B(true,'托管服务')]];
 document.getElementById('sec').innerHTML='<tr><th>测试</th><th style="text-align:left">TDAM</th><th style="text-align:left">AgentCore</th></tr>'+rows.map(r=>`<tr><td>${r[0]}</td><td style="text-align:left">${r[1]}</td><td style="text-align:left">${r[2]}</td></tr>`).join('')})();
-// perf lines (log y, p95)
-(function(){const s=document.getElementById('perf'),w=s.clientWidth||900,l=60,r=200,t=12,h=230,cols=['--s1','--s2','--s3','--s4'];
+// lag + write tables
+(function(){const f=v=>(v==null||Number.isNaN(v))?'—':v.toFixed(1)+' s';const rows=[['AgentCore','agentcore'],['TDAM','tdam']].map(([n,k])=>{const g=D.lag[k]||{};const per=(g.rows||[]).map(r=>r.ready_seconds==null?'未就绪':r.ready_seconds.toFixed(0)+'s').join(' · ');
+return `<tr><td>${n}</td><td>${g.ready}/${g.n}</td><td>${f(g.p50)}</td><td>${f(g.p95)}</td><td>${f(g.max)}</td><td style="text-align:left">${per}</td></tr>`}).join('');
+document.getElementById('lagT').innerHTML='<tr><th>系统</th><th>30 分钟内可检索</th><th>p50</th><th>p95</th><th>最慢</th><th style="text-align:left">各用户就绪时间</th></tr>'+rows;
+const w=D.write||{},wr=[['AgentCore CreateEvent（每 ≤20 条消息一次）','agentcore'],['TDAM conversation/add（每轮一次，同步计算 embedding）','tdam']].map(([n,k])=>{const x=w[k]||{};return `<tr><td>${n}</td><td>${x.n||'—'}</td><td>${x.p50==null?'—':x.p50.toFixed(3)+' s'}</td><td>${x.p95==null?'—':x.p95.toFixed(3)+' s'}</td><td>${x.p99==null?'—':x.p99.toFixed(3)+' s'}</td></tr>`}).join('');
+document.getElementById('writeT').innerHTML='<tr><th>写入调用</th><th>调用次数</th><th>p50</th><th>p95</th><th>p99</th></tr>'+wr})();
+// retrieval perf: small multiples p50 / p95 (same log scale, one metric per chart)
+(function(){const cols=['--s1','--s2','--s3','--s4'];
 document.getElementById('perfLeg').innerHTML=D.perf.map((p,i)=>`<span><i class="sw" style="background:var(${cols[i]})"></i>${p.label}</span>`).join('');
+function draw(id,key){const s=document.getElementById(id),w=s.clientWidth||460,l=46,r=16,t=10,h=200;
 const cs=[1,8,32],X=c=>l+cs.indexOf(c)*(w-l-r)/2,lo=Math.log10(.05),hi=Math.log10(50),Y=v=>t+h-(Math.log10(Math.max(v,.05))-lo)/(hi-lo)*h;
-[.1,.3,1,3,10,30].forEach(v=>{el('line',{x1:l,x2:w-r,y1:Y(v),y2:Y(v),stroke:css('--grid')},s);el('text',{x:l-8,y:Y(v)+4,'text-anchor':'end'},s).textContent=v+'s'});
-cs.forEach(c=>el('text',{x:X(c),y:t+h+18,'text-anchor':'middle'},s).textContent='并发 '+c);
-D.perf.forEach((p,i)=>{const col=css(cols[i]);el('polyline',{points:p.pts.map(q=>X(q.c)+','+Y(q.p95)).join(' '),fill:'none',stroke:col,'stroke-width':2},s);
-p.pts.forEach(q=>{const m=el('circle',{cx:X(q.c),cy:Y(q.p95),r:5,fill:col,stroke:css('--surface-1'),'stroke-width':2},s);const hit=el('circle',{cx:X(q.c),cy:Y(q.p95),r:14,fill:'transparent'},s);
-hit.addEventListener('mousemove',e=>show(e,`<b>${p.label}</b> · 并发 ${q.c}<br>p50 ${q.p50.toFixed(3)}s · p95 ${q.p95.toFixed(3)}s · p99 ${q.p99.toFixed(3)}s<br>${q.throughput_rps.toFixed(1)} rps · 错误 ${q.errors}`));hit.addEventListener('mouseleave',hide)});
-});
-// end labels with de-collision (min 14px apart)
-const labs=D.perf.map((p,i)=>{const q=p.pts[p.pts.length-1];return {t:p.label,x:X(q.c)+10,y:Y(q.p95)+4}}).sort((a,b)=>a.y-b.y);
-for(let k=1;k<labs.length;k++)if(labs[k].y-labs[k-1].y<14)labs[k].y=labs[k-1].y+14;
-labs.forEach(l=>el('text',{x:l.x,y:l.y,style:'fill:'+css('--ink')},s).textContent=l.t);
-document.getElementById('perfT').innerHTML='<tr><th>方案</th><th>并发</th><th>p50</th><th>p95</th><th>p99</th><th>rps</th><th>错误</th></tr>'+D.perf.flatMap(p=>p.pts.map(q=>`<tr><td>${p.label}</td><td>${q.c}</td><td>${q.p50.toFixed(3)}</td><td>${q.p95.toFixed(3)}</td><td>${q.p99.toFixed(3)}</td><td>${q.throughput_rps.toFixed(1)}</td><td>${q.errors}</td></tr>`)).join('')})();
+[.1,.3,1,3,10,30].forEach(v=>{el('line',{x1:l,x2:w-r,y1:Y(v),y2:Y(v),stroke:css('--grid')},s);el('text',{x:l-6,y:Y(v)+4,'text-anchor':'end'},s).textContent=v+'s'});
+cs.forEach(c=>el('text',{x:X(c),y:t+h+18,'text-anchor':c===1?'start':c===32?'end':'middle'},s).textContent='并发 '+c);
+D.perf.forEach((p,i)=>{const col=css(cols[i]);el('polyline',{points:p.pts.map(q=>X(q.c)+','+Y(q[key])).join(' '),fill:'none',stroke:col,'stroke-width':2},s);
+p.pts.forEach(q=>{el('circle',{cx:X(q.c),cy:Y(q[key]),r:5,fill:col,stroke:css('--surface-1'),'stroke-width':2},s);const hit=el('circle',{cx:X(q.c),cy:Y(q[key]),r:14,fill:'transparent'},s);
+hit.addEventListener('mousemove',e=>show(e,`<b>${p.label}</b> · 并发 ${q.c}<br>p50 ${q.p50.toFixed(3)}s · p95 ${q.p95.toFixed(3)}s · p99 ${q.p99.toFixed(3)}s<br>吞吐 ${q.throughput_rps.toFixed(1)} 请求/秒 · 错误 ${q.errors}`));hit.addEventListener('mouseleave',hide)})})}
+draw('perf50','p50');draw('perf95','p95');
+document.getElementById('perfT').innerHTML='<tr><th>方案</th><th>并发</th><th>p50</th><th>p95</th><th>p99</th><th>吞吐（请求/秒）</th><th>错误</th></tr>'+D.perf.flatMap(p=>p.pts.map(q=>`<tr><td>${p.label}</td><td>${q.c}</td><td>${q.p50.toFixed(3)}</td><td>${q.p95.toFixed(3)}</td><td>${q.p99.toFixed(3)}</td><td>${q.throughput_rps.toFixed(1)}</td><td>${q.errors}</td></tr>`)).join('')})();
 // cost
 (function(){const a=D.cost.agentcore||{},t=D.cost.tdam||{};document.getElementById('cost').innerHTML=`<tr><th>项</th><th>AgentCore</th><th>TDAM</th></tr>
 <tr><td>记忆抽取 / 存储</td><td>${a.ltm_records} 条长期记录 · $${(a.ltm_storage_usd_month||0).toFixed(2)}/月</td><td>内部 LLM + embedding $${(t.internal_llm_embedding_usd||0).toFixed(2)}（两种拓扑共 60 份历史）</td></tr>
