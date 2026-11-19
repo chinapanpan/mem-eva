@@ -11,8 +11,9 @@ from .backends import make
 from .common import ROOT, Bedrock, Journal, ntokens, pack_context, read_json, write_json
 from .judge import ANSWER_SYSTEM, answer_prompt, coverage_prompt, judge_prompt, parse_coverage, parse_yes
 
-STORE = {"none": None, "tdam_full": "tdam", "tdam_l1": "tdam", "agentcore_spu": "agentcore"}
-STORE_ARM = {"tdam": "tdam_full", "agentcore": "agentcore_spu"}
+STORE = {"none": None, "tdam_full": "tdam", "tdam_l1": "tdam", "agentcore_spu": "agentcore",
+         "tdam_shared_full": "tdam_shared", "tdam_shared_l1": "tdam_shared"}
+STORE_ARM = {"tdam": "tdam_full", "agentcore": "agentcore_spu", "tdam_shared": "tdam_shared_full"}
 
 
 def log(msg: str) -> None:
