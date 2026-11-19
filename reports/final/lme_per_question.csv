@@ -13,3 +13,17 @@ none,dd2973ad,lme_dd2973ad,multi-session,0,,0,0.0000
 none,f4f1d8a4,lme_f4f1d8a4,single-session-user,0,,0,0.0000
 none,gpt4_93159ced,lme_gpt4_93159ced,temporal-reasoning,0,,0,0.0000
 none,gpt4_93159ced_abs,lme_gpt4_93159ced_abs,abstention,1,,0,0.0000
+tdam_full,57f827a0,lme_57f827a0,single-session-preference,0,,3925,0.1844
+tdam_full,5a4f22c0,lme_5a4f22c0,knowledge-update,1,,3846,0.1504
+tdam_full,d596882b,lme_d596882b,single-session-assistant,0,,3835,0.1621
+tdam_full,dd2973ad,lme_dd2973ad,multi-session,0,,4005,0.2047
+tdam_full,f4f1d8a4,lme_f4f1d8a4,single-session-user,1,,3837,0.1966
+tdam_full,gpt4_93159ced,lme_gpt4_93159ced,temporal-reasoning,0,,4047,0.1492
+tdam_full,gpt4_93159ced_abs,lme_gpt4_93159ced_abs,abstention,1,,4017,0.1131
+tdam_l1,57f827a0,lme_57f827a0,single-session-preference,0,,2003,0.1503
+tdam_l1,5a4f22c0,lme_5a4f22c0,knowledge-update,1,,1943,0.1490
+tdam_l1,d596882b,lme_d596882b,single-session-assistant,0,,2020,0.1485
+tdam_l1,dd2973ad,lme_dd2973ad,multi-session,0,,2032,0.1704
+tdam_l1,f4f1d8a4,lme_f4f1d8a4,single-session-user,1,,1996,0.1593
+tdam_l1,gpt4_93159ced,lme_gpt4_93159ced,temporal-reasoning,1,,2260,0.1277
+tdam_l1,gpt4_93159ced_abs,lme_gpt4_93159ced_abs,abstention,1,,2170,0.1295

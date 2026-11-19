@@ -18,6 +18,32 @@
           "retrieval_p50": null,
           "retrieval_p95": null
         },
+        "tdam_full": {
+          "correct": 3,
+          "n": 7,
+          "accuracy": 0.42857142857142855,
+          "ci95": [
+            0.15821692226262685,
+            0.7495457695909742
+          ],
+          "fact_coverage_4k": null,
+          "context_tokens_mean": 3930.285714285714,
+          "retrieval_p50": 0.16208224000001792,
+          "retrieval_p95": 0.2022841429999971
+        },
+        "tdam_l1": {
+          "correct": 4,
+          "n": 7,
+          "accuracy": 0.5714285714285714,
+          "ci95": [
+            0.2504542304090258,
+            0.8417830777373732
+          ],
+          "fact_coverage_4k": null,
+          "context_tokens_mean": 2060.5714285714284,
+          "retrieval_p50": 0.14902480199998536,
+          "retrieval_p95": 0.16707607869993807
+        },
         "agentcore_spu": {
           "correct": 5,
           "n": 7,
@@ -63,6 +89,66 @@
             "n": 1
           }
         },
+        "tdam_full": {
+          "abstention": {
+            "correct": 1,
+            "n": 1
+          },
+          "knowledge-update": {
+            "correct": 1,
+            "n": 1
+          },
+          "multi-session": {
+            "correct": 0,
+            "n": 1
+          },
+          "single-session-assistant": {
+            "correct": 0,
+            "n": 1
+          },
+          "single-session-preference": {
+            "correct": 0,
+            "n": 1
+          },
+          "single-session-user": {
+            "correct": 1,
+            "n": 1
+          },
+          "temporal-reasoning": {
+            "correct": 0,
+            "n": 1
+          }
+        },
+        "tdam_l1": {
+          "abstention": {
+            "correct": 1,
+            "n": 1
+          },
+          "knowledge-update": {
+            "correct": 1,
+            "n": 1
+          },
+          "multi-session": {
+            "correct": 0,
+            "n": 1
+          },
+          "single-session-assistant": {
+            "correct": 0,
+            "n": 1
+          },
+          "single-session-preference": {
+            "correct": 0,
+            "n": 1
+          },
+          "single-session-user": {
+            "correct": 1,
+            "n": 1
+          },
+          "temporal-reasoning": {
+            "correct": 1,
+            "n": 1
+          }
+        },
         "agentcore_spu": {
           "abstention": {
             "correct": 1,
@@ -100,9 +186,35 @@
           "agentcore_spu_only": 4,
           "none_only": 0,
           "mcnemar_p": 0.125
+        },
+        "agentcore_spu_vs_tdam_full": {
+          "n": 7,
+          "agentcore_spu_only": 2,
+          "tdam_full_only": 0,
+          "mcnemar_p": 0.5
+        },
+        "agentcore_spu_vs_tdam_l1": {
+          "n": 7,
+          "agentcore_spu_only": 1,
+          "tdam_l1_only": 0,
+          "mcnemar_p": 1.0
         }
       },
       "infra": {
+        "ingest/tdam/_summary.json": {
+          "store": "tdam",
+          "users": 7,
+          "writes": 1819,
+          "wall_seconds": 138.55193829536438,
+          "last_write": 1795073960.7875898,
+          "write_latency": {
+            "n": 1819,
+            "p50": 0.2241,
+            "p95": 0.34046999999999994,
+            "p99": 0.669555999999998,
+            "mean": 0.2517617372182518
+          }
+        },
         "ingest/agentcore/_summary.json": {
           "store": "agentcore",
           "users": 7,
@@ -116,6 +228,47 @@
             "p99": 0.17323599999999992,
             "mean": 0.08034808126410835
           }
+        },
+        "readiness/tdam.json": {
+          "waited": 1080.0930316448212,
+          "counts": {
+            "final-lme_f4f1d8a4": {
+              "l1": 98,
+              "l2": 14,
+              "l3": 1
+            },
+            "final-lme_d596882b": {
+              "l1": 104,
+              "l2": 14,
+              "l3": 1
+            },
+            "final-lme_57f827a0": {
+              "l1": 92,
+              "l2": 14,
+              "l3": 1
+            },
+            "final-lme_dd2973ad": {
+              "l1": 98,
+              "l2": 14,
+              "l3": 1
+            },
+            "final-lme_gpt4_93159ced": {
+              "l1": 103,
+              "l2": 14,
+              "l3": 1
+            },
+            "final-lme_5a4f22c0": {
+              "l1": 104,
+              "l2": 14,
+              "l3": 1
+            },
+            "final-lme_gpt4_93159ced_abs": {
+              "l1": 87,
+              "l2": 14,
+              "l3": 1
+            }
+          },
+          "ready_at": 1795075040.9108362
         },
         "readiness/agentcore.json": {
           "waited": 880.3201997280121,
@@ -162,16 +315,16 @@
       },
       "usage": {
         "answer|us.anthropic.claude-haiku-5-5": {
-          "calls": 14,
-          "input_tokens": 50156,
-          "output_tokens": 3153,
-          "usd": 0.0073
+          "calls": 28,
+          "input_tokens": 117490,
+          "output_tokens": 6797,
+          "usd": 0.0167
         },
         "judge|us.anthropic.claude-sonnet-5-5": {
-          "calls": 14,
-          "input_tokens": 5027,
-          "output_tokens": 1274,
-          "usd": 0.0251
+          "calls": 28,
+          "input_tokens": 10105,
+          "output_tokens": 2414,
+          "usd": 0.0488
         }
       },
       "cost_estimate": {

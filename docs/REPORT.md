@@ -67,9 +67,10 @@ runner 是另一台 EC2，通过 VPC 私网访问 TDAM，访问 AgentCore 走同
 |---|---:|
 | none | 1/7 |
 | agentcore_spu | 5/7 |
-| tdam_full / tdam_l1 | LME_TDAM |
+| tdam_l1 | 4/7 |
+| tdam_full | 3/7 |
 
-7 题只能作为方向性参考（95% CI 极宽）。如果要和公开结果对照，可以参考 [AgentMemBench](https://github.com/milan9527/AgentMemBench)：在 14 题的设置下，AgentCore SPU 13/14，Mem0 OSS 12/14。
+两边都答错了跨会话题和偏好题；AgentCore 比 TDAM L1 多答对了单会话助手信息题。TDAM 这次所有队列都已清空（L1 686、L2 98、L3 7）才开始评测。7 题只能作为方向性参考（95% CI 极宽，配对检验 p=0.5–1.0）。如果要和公开结果对照，可以参考 [AgentMemBench](https://github.com/milan9527/AgentMemBench)：在 14 题的设置下，AgentCore SPU 13/14，Mem0 OSS 12/14。
 
 ## 3. 多租户与安全
 

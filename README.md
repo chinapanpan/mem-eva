@@ -7,7 +7,23 @@
 
 框架和被测系统解耦，换成 mem0、Zep 或自研系统时只需要再写一个 adapter（见 `memeva/backends/base.py`）。
 
-> 结论与数据：[`docs/REPORT.md`](docs/REPORT.md) · 评测设计：[`docs/DESIGN.md`](docs/DESIGN.md) · TDAM 配置差异：[`docs/CONFIG_DIFF.md`](docs/CONFIG_DIFF.md)
+> 结论与数据：[`docs/REPORT.md`](docs/REPORT.md) · 交互式报告：<https://cdn.chrisai.blog/mem-eva-report.html> · 评测设计：[`docs/DESIGN.md`](docs/DESIGN.md) · TDAM 配置差异：[`docs/CONFIG_DIFF.md`](docs/CONFIG_DIFF.md)
+
+## 本次结果（2026-11-19，us-east-1）
+
+| | AgentCore Memory（SPU） | TDAM 最佳配置 |
+|---|---:|---:|
+| web3_zh 正确率（120 题） | **80.0%**（72–86%） | 60.0%（51–68%） |
+| 4K 上下文事实覆盖 | **95.1%** | 71.8% |
+| LongMemEval-S（7 题） | 5/7 | 4/7 |
+| 写入→可检索（6 个用户） | p50 10.5 秒，6/6 | 30 分钟内 0/6 |
+| 伪造 user_id 越权读取 | IAM 拒绝 | 可读 |
+| 同一 team+agent 的用户画像 | 按 actor 隔离 | 30 个用户共用一份 |
+| 假密钥写入长期记忆 | 30/30（需要脱敏） | **0/30** |
+| 检索 p50（并发 1） | 0.17–0.19 秒 | **0.09–0.13 秒** |
+| 并发 32 | 受 30 TPS 默认配额限制 | **80 rps，0 错误** |
+
+详细数据、局限与解读见报告，逐题结果见 [`reports/final/`](reports/final/)。
 
 ## 评测维度
 

@@ -57,7 +57,7 @@ th:first-child,td:first-child{text-align:left}th{color:var(--ink2);font-weight:6
 .badge{display:inline-flex;gap:4px;align-items:center;font-size:13px;font-weight:600}.ok{color:var(--good)}.no{color:var(--bad)}.mid{color:var(--warn)}
 .legend{display:flex;gap:16px;font-size:13px;color:var(--ink2);margin:4px 0 8px}.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
 #tip{position:fixed;pointer-events:none;background:var(--surface-1);color:var(--ink);border:1px solid var(--ring);border-radius:8px;padding:8px 10px;font-size:13px;box-shadow:0 4px 16px rgba(0,0,0,.12);display:none;z-index:9;max-width:320px}
-svg text{fill:var(--ink2);font-size:12px}.note{color:var(--ink2);font-size:13px}
+svg text{fill:var(--ink2);font-size:12px;pointer-events:none}.note{color:var(--ink2);font-size:13px}
 details summary{cursor:pointer;color:var(--ink2);font-size:13px;margin-top:8px}a{color:var(--s1)}
 </style></head><body><div class="viz-root"><div class="wrap">
 <h1>Agent 记忆系统评测：TencentDB Agent Memory vs Amazon Bedrock AgentCore Memory</h1>
@@ -68,6 +68,7 @@ details summary{cursor:pointer;color:var(--ink2);font-size:13px;margin-top:8px}a
 <div class="card"><div class="legend"><span><i class="sw" style="background:var(--s1)"></i>AgentCore</span><span><i class="sw" style="background:var(--s2)"></i>TDAM</span><span><i class="sw" style="background:var(--none)"></i>无记忆基线</span></div>
 <svg id="acc" width="100%" height="270" role="img" aria-label="各方案正确率"></svg>
 <details><summary>数据表</summary><table id="accT"></table></details>
+<p class="note">LongMemEval-S（7 题，仅供参考）：AgentCore __LME_AC__，TDAM L1 __LME_T1__，TDAM full __LME_TF__，无记忆 __LME_N__。</p>
 <p class="note">配对 McNemar 检验（AgentCore SPU vs TDAM 最佳 arm `tdam_shared_l1`）：只有 AgentCore 答对 26 题，只有 TDAM 答对 2 题，p &lt; 0.001。</p></div>
 
 <h2>分类别答对题数</h2>
@@ -127,7 +128,7 @@ const sh=(D.sharing||[]).find(x=>x.arm==='tdam_shared_full')||{};const rows=[
 ['容器重启 / 节点故障',B('mid',`重启时 ${D.failover.failed}/${D.failover.requests} 失败，数据无丢失；单机，高可用需自建`),B(true,'托管服务')]];
 document.getElementById('sec').innerHTML='<tr><th>测试</th><th style="text-align:left">TDAM</th><th style="text-align:left">AgentCore</th></tr>'+rows.map(r=>`<tr><td>${r[0]}</td><td style="text-align:left">${r[1]}</td><td style="text-align:left">${r[2]}</td></tr>`).join('')})();
 // perf lines (log y, p95)
-(function(){const s=document.getElementById('perf'),w=s.clientWidth||900,l=60,r=150,t=12,h=230,cols=['--s1','--s2','--s3','--s4'];
+(function(){const s=document.getElementById('perf'),w=s.clientWidth||900,l=60,r=200,t=12,h=230,cols=['--s1','--s2','--s3','--s4'];
 document.getElementById('perfLeg').innerHTML=D.perf.map((p,i)=>`<span><i class="sw" style="background:var(${cols[i]})"></i>${p.label}</span>`).join('');
 const cs=[1,8,32],X=c=>l+cs.indexOf(c)*(w-l-r)/2,lo=Math.log10(.05),hi=Math.log10(50),Y=v=>t+h-(Math.log10(Math.max(v,.05))-lo)/(hi-lo)*h;
 [.1,.3,1,3,10,30].forEach(v=>{el('line',{x1:l,x2:w-r,y1:Y(v),y2:Y(v),stroke:css('--grid')},s);el('text',{x:l-8,y:Y(v)+4,'text-anchor':'end'},s).textContent=v+'s'});
@@ -135,7 +136,11 @@ cs.forEach(c=>el('text',{x:X(c),y:t+h+18,'text-anchor':'middle'},s).textContent=
 D.perf.forEach((p,i)=>{const col=css(cols[i]);el('polyline',{points:p.pts.map(q=>X(q.c)+','+Y(q.p95)).join(' '),fill:'none',stroke:col,'stroke-width':2},s);
 p.pts.forEach(q=>{const m=el('circle',{cx:X(q.c),cy:Y(q.p95),r:5,fill:col,stroke:css('--surface-1'),'stroke-width':2},s);const hit=el('circle',{cx:X(q.c),cy:Y(q.p95),r:14,fill:'transparent'},s);
 hit.addEventListener('mousemove',e=>show(e,`<b>${p.label}</b> · 并发 ${q.c}<br>p50 ${q.p50.toFixed(3)}s · p95 ${q.p95.toFixed(3)}s · p99 ${q.p99.toFixed(3)}s<br>${q.throughput_rps.toFixed(1)} rps · 错误 ${q.errors}`));hit.addEventListener('mouseleave',hide)});
-const last=p.pts[p.pts.length-1];el('text',{x:X(last.c)+10,y:Y(last.p95)+4+(i%2?10:-2),style:'fill:'+css('--ink')},s).textContent=p.label});
+});
+// end labels with de-collision (min 14px apart)
+const labs=D.perf.map((p,i)=>{const q=p.pts[p.pts.length-1];return {t:p.label,x:X(q.c)+10,y:Y(q.p95)+4}}).sort((a,b)=>a.y-b.y);
+for(let k=1;k<labs.length;k++)if(labs[k].y-labs[k-1].y<14)labs[k].y=labs[k-1].y+14;
+labs.forEach(l=>el('text',{x:l.x,y:l.y,style:'fill:'+css('--ink')},s).textContent=l.t);
 document.getElementById('perfT').innerHTML='<tr><th>方案</th><th>并发</th><th>p50</th><th>p95</th><th>p99</th><th>rps</th><th>错误</th></tr>'+D.perf.flatMap(p=>p.pts.map(q=>`<tr><td>${p.label}</td><td>${q.c}</td><td>${q.p50.toFixed(3)}</td><td>${q.p95.toFixed(3)}</td><td>${q.p99.toFixed(3)}</td><td>${q.throughput_rps.toFixed(1)}</td><td>${q.errors}</td></tr>`)).join('')})();
 // cost
 (function(){const a=D.cost.agentcore||{},t=D.cost.tdam||{};document.getElementById('cost').innerHTML=`<tr><th>项</th><th>AgentCore</th><th>TDAM</th></tr>
@@ -145,5 +150,7 @@ document.getElementById('perfT').innerHTML='<tr><th>方案</th><th>并发</th><t
 <tr><td>主机</td><td>无</td><td>$${t.ec2_hourly_usd}/小时 + EBS + 高可用</td></tr>`})();
 </script></body></html>"""
 out = ROOT / "reports" / run / "mem-eva-report.html"
+HTML = HTML.replace("__LME_AC__", lme.get("agentcore_spu", "—")).replace("__LME_T1__", lme.get("tdam_l1", "—")).replace(
+    "__LME_TF__", lme.get("tdam_full", "—")).replace("__LME_N__", lme.get("none", "—"))
 out.write_text(HTML.replace("__DATA__", json.dumps(DATA, ensure_ascii=False)))
 print("wrote", out)
