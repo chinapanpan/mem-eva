@@ -56,6 +56,7 @@ def summarize(run: Run, arms: list[str]) -> dict:
         d = read_json(p)
         rep.setdefault("probes", {})[p.stem] = _trim(d)
     rep["usage"] = usage(run)
+    rep["cost_estimate"] = cost_estimate(run, rep)
     write_json(run.dir / "report.json", rep)
     (run.dir / "results.md").write_text(markdown(rep, cats))
     return rep
@@ -90,6 +91,31 @@ def usage(run: Run) -> dict:
     return dict(agg)
 
 
+def cost_estimate(run: Run, rep: dict) -> dict:
+    """Public-price estimate for THIS run (not a bill). AgentCore: STM ingest + LTM records (1 month) + retrievals.
+    TDAM: internal LLM/embedding tokens (LiteLLM log) + EC2 hours supplied in config (pricing.tdam_ec2_hourly)."""
+    pr = run.cfg.get("pricing", {})
+    ac = pr.get("agentcore", {})
+    out: dict = {}
+    ing = run.dir / "ingest" / "agentcore"
+    if ing.exists():
+        events = sum(len(read_json(p).get("done", {})) for p in ing.glob("*.json") if not p.name.startswith("_"))
+        recs = sum((rep.get("infra", {}).get("readiness/agentcore.json", {}).get("counts") or {}).get(u, {}).get(k, 0)
+                   for u in (rep.get("infra", {}).get("readiness/agentcore.json", {}).get("counts") or {})
+                   for k in ("semantic", "preference", "summary"))
+        n_retr = sum(1 for r in run.journal.rows() if r.get("stage") == "answer" and r.get("arm") == "agentcore_spu") * 3
+        stm_gb = events * 12 / 1024 / 1024          # billed at >=12 KB per event (our events are <64 KB)
+        out["agentcore"] = {"events": events, "ltm_records": recs, "retrieve_calls_eval": n_retr,
+                            "stm_ingest_usd": round(stm_gb * ac.get("stm_ingest_per_gb", 0), 4),
+                            "ltm_storage_usd_month": round(recs / 1000 * ac.get("ltm_records_per_1000_month", 0), 4),
+                            "retrieval_usd": round(n_retr / 1000 * ac.get("ltm_retrievals_per_1000", 0), 4)}
+        out["agentcore"]["total_usd"] = round(sum(v for k, v in out["agentcore"].items() if k.endswith("_usd") or k.endswith("_month")), 4)
+    tdam_llm = sum(v.get("usd", 0) for k, v in rep.get("usage", {}).items() if k.startswith("tdam_internal|"))
+    out["tdam"] = {"internal_llm_embedding_usd": round(tdam_llm, 4),
+                   "ec2_hourly_usd": pr.get("tdam_ec2_hourly"), "note": "add EC2/EBS hours, HA replicas, backups and ops time"}
+    return out
+
+
 def markdown(rep: dict, cats: list[str]) -> str:
     L = [f"# Results — run `{rep['run']}` / dataset `{rep['dataset']}`", "",
          "| arm | correct/n | accuracy | 95% CI | 4K fact coverage | ctx tokens | retrieval p50 (s) | p95 (s) |",
@@ -105,4 +131,6 @@ def markdown(rep: dict, cats: list[str]) -> str:
         L += ["", "## Paired comparison (exact McNemar)", ""]
         for k, v in rep["pairwise"].items():
             L.append(f"- {k}: n={v['n']}, discordant={[x for x in v.values()][1:3]}, p={v['mcnemar_p']:.3f}")
+    if rep.get("cost_estimate"):
+        L += ["", "## Cost estimate (public prices, this run)", "", "```json", json.dumps(rep["cost_estimate"], indent=1), "```"]
     return "\n".join(L) + "\n"

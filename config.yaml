@@ -55,6 +55,7 @@ pricing:
     us.anthropic.claude-sonnet-5-5: [2.20, 11.00]
     tdam-llm: [0.11, 0.55]       # TDAM internal LLM = Haiku 5.5 via LiteLLM
     tdam-embed: [0.02, 0.0]      # Titan Text Embeddings V2
+  tdam_ec2_hourly: 0.2016       # m7i.xlarge on-demand us-east-1 (TDAM host); EBS gp3 40GB ~ $3.2/month extra
   agentcore:
     stm_ingest_per_gb: 1.00      # each event billed min 12 KB, max 64 KB
     stm_storage_per_gb_month: 0.10
