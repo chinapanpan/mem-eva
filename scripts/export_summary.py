@@ -42,12 +42,17 @@ for ds_dir in sorted(p for p in src.iterdir() if p.is_dir()):
 import re  # noqa: E402
 
 def scrub(o):
-    """Remove account IDs / instance IDs / memory IDs from anything published."""
-    t = json.dumps(o, ensure_ascii=False, default=str)
-    t = re.sub(r"\b\d{12}\b", "<account-id>", t)
-    t = re.sub(r"\bi-[0-9a-f]{8,17}\b", "<instance-id>", t)
-    t = re.sub(r"memeva_\d{8}_\d{6}-\w+", "<memory-id>", t)
-    return json.loads(t)
+    """Remove account IDs / instance IDs / memory IDs from string values (numbers are left alone)."""
+    if isinstance(o, dict):
+        return {k: scrub(v) for k, v in o.items()}
+    if isinstance(o, list):
+        return [scrub(v) for v in o]
+    if isinstance(o, str):
+        o = re.sub(r"\b\d{12}\b", "<account-id>", o)
+        o = re.sub(r"\bi-[0-9a-f]{8,17}\b", "<instance-id>", o)
+        return re.sub(r"memeva_\d{8}_\d{6}-\w+", "<memory-id>", o)
+    return o
+
 
 write_json(dst / "summary.json", scrub(out))
 print("exported", dst, list(out["datasets"]))
