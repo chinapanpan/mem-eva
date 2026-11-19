@@ -54,7 +54,9 @@ def main() -> None:
         run.wait(stores)
     if a.cmd in ("evaluate", "all"):
         run.evaluate(arms, workers, coverage=not a.no_coverage)
-    if a.cmd in ("report", "all"):
+    if a.cmd == "rejudge":
+        run.rejudge(arms, workers)
+    if a.cmd in ("report", "all", "rejudge"):
         rep = summarize(run, arms)
         print((run.dir / "results.md").read_text())
         log(f"report written to {run.dir}/report.json")

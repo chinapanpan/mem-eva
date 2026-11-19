@@ -52,13 +52,26 @@ CATEGORY_TEMPLATE = {
 }
 
 
+VERDICT_SUFFIX = "\n\nYou may reason briefly, but the last line of your reply must be exactly `VERDICT: yes` or `VERDICT: no`."
+
+
 def judge_prompt(q: dict, response: str) -> str:
     key = "abstention" if q.get("abstention") else CATEGORY_TEMPLATE[q["category"]]
-    return TEMPLATES[key].format(q=q["question"], a=q["answer"], r=response)
+    return TEMPLATES[key].format(q=q["question"], a=q["answer"], r=response) + VERDICT_SUFFIX
 
 
 def parse_yes(text: str) -> bool:
-    return text.strip().lower().lstrip("*").startswith("yes")
+    """Robust verdict parser: explicit VERDICT line > leading yes/no > last standalone yes/no."""
+    t = text.strip().lower()
+    m = re.findall(r"verdict\s*[:：]\s*\**\s*(yes|no)", t)
+    if m:
+        return m[-1] == "yes"
+    if t.lstrip("*").startswith("yes"):
+        return True
+    if t.lstrip("*").startswith("no"):
+        return False
+    m = re.findall(r"\b(yes|no)\b", t)
+    return bool(m) and m[-1] == "yes"
 
 
 COVERAGE_PROMPT = """You check whether a memory context contains given facts.
@@ -71,7 +84,7 @@ For each numbered fact, answer 1 if the context states it (paraphrase or other l
 Facts:
 {facts}
 
-Return JSON only: {{"covered": [0 or 1 for each fact in order]}}"""
+End your reply with one line of JSON: {{"covered": [0 or 1 for each fact in order]}}"""
 
 
 def coverage_prompt(context: str, facts: list[str]) -> str:
@@ -79,9 +92,9 @@ def coverage_prompt(context: str, facts: list[str]) -> str:
 
 
 def parse_coverage(text: str, n: int) -> list[int]:
-    m = re.search(r"\{.*\}", text, re.S)
+    m = re.findall(r"\{[^{}]*\"covered\"[^{}]*\}", text, re.S)
     try:
-        v = [int(bool(x)) for x in json.loads(m.group(0))["covered"]]
+        v = [int(bool(x)) for x in json.loads(m[-1])["covered"]]
         return (v + [0] * n)[:n]
     except Exception:  # noqa: BLE001
         return [0] * n

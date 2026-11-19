@@ -38,3 +38,11 @@ def test_chunks():
 
 def test_lme_date():
     assert _lme_date("2023/05/20 (Sat) 02:21") == "2023-05-20T02:21:00.000Z"
+
+
+def test_parse_verdicts():
+    assert parse_yes("Rubric points ok...\nVERDICT: yes")
+    assert not parse_yes("reasoning yes yes\nVERDICT: no")
+    assert parse_yes("Yes. The response recalls")
+    assert not parse_yes("")
+    assert parse_yes("The rubric is met, so the answer is yes")

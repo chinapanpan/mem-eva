@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import copy
+import re
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -105,12 +106,10 @@ class Run:
             context, kept = pack_context(blocks, budget)
             ans = self.llm.chat(self.cfg["answer_model"], answer_prompt(context, q["question"], q["question_date"]),
                                 system=ANSWER_SYSTEM, max_tokens=800, stage="answer", arm=arm, qid=q["qid"])
-            verdict = self.llm.chat(self.cfg["judge_model"], judge_prompt(q, ans), max_tokens=10,
-                                    stage="judge", arm=arm, qid=q["qid"])
+            verdict = self.judge(q, ans, arm)
             cov = None
             if coverage and q.get("facts") and arm != "none":
-                cov = parse_coverage(self.llm.chat(self.cfg["judge_model"], coverage_prompt(context, q["facts"]),
-                                                   max_tokens=200, stage="coverage", arm=arm, qid=q["qid"]), len(q["facts"]))
+                cov = self.coverage(context, q["facts"], arm, q["qid"])
             row = {"arm": arm, "qid": q["qid"], "user_id": u["user_id"], "category": q["category"],
                    "question": q["question"], "gold": q["answer"], "answer": ans, "judge_raw": verdict,
                    "correct": parse_yes(verdict), "facts": q.get("facts", []), "coverage": cov,
@@ -122,6 +121,34 @@ class Run:
 
         with ThreadPoolExecutor(workers) as ex:
             list(ex.map(one, jobs))
+
+    def judge(self, q: dict, ans: str, arm: str) -> str:
+        for _ in range(3):
+            v = self.llm.chat(self.cfg["judge_model"], judge_prompt(q, ans), max_tokens=400, stage="judge", arm=arm, qid=q["qid"])
+            if re.search(r"\b(yes|no)\b", v.lower()):
+                return v
+        return v
+
+    def coverage(self, context: str, facts: list[str], arm: str, qid: str) -> list[int]:
+        return parse_coverage(self.llm.chat(self.cfg["judge_model"], coverage_prompt(context, facts), max_tokens=800,
+                                            stage="coverage", arm=arm, qid=qid), len(facts))
+
+    def rejudge(self, arms: list[str], workers: int = 4) -> None:
+        """Re-score saved answers with the current judge (answers/contexts unchanged)."""
+        qs = {q["qid"]: q for u in self.data()["users"] for q in u["questions"]}
+        rows = [(a, r) for a in arms for r in self.results(a)]
+
+        def one(item):
+            arm, r = item
+            v = self.judge(qs[r["qid"]], r["answer"], arm)
+            r.setdefault("judge_history", []).append(r.get("judge_raw"))
+            r["judge_raw"], r["correct"] = v, parse_yes(v)
+            if r.get("facts") and arm != "none":
+                r["coverage"] = self.coverage(r["context"], r["facts"], arm, r["qid"])
+            write_json(self.dir / "results" / arm / f"{r['qid']}.json", r)
+        with ThreadPoolExecutor(workers) as ex:
+            list(ex.map(one, rows))
+        log(f"rejudged {len(rows)} answers")
 
     def results(self, arm: str) -> list[dict]:
         folder = self.dir / "results" / arm
