@@ -8,16 +8,19 @@ cd "$(dirname "$0")"
 TDAM_IMAGE="${TDAM_IMAGE:-agentmemory/memory-core@sha256:342331d5ccdb31ce84ac1ba205aa0b1a8b16a13fe71b6a104d17d41197eb7112}"
 TDAM_BIND="${TDAM_BIND:-0.0.0.0}"
 DATA_VOLUME="${DATA_VOLUME:-tdam-bench-data}"
-LITELLM_MASTER_KEY="${LITELLM_MASTER_KEY:-sk-$(head -c 12 /dev/urandom | od -An -tx1 | tr -d ' \n')}"
+# LiteLLM key is persisted so re-running this script can never leave TDAM and LiteLLM with different keys
+[ -f .litellm_key ] || echo "sk-$(head -c 12 /dev/urandom | od -An -tx1 | tr -d ' \n')" > .litellm_key
+LITELLM_MASTER_KEY="${LITELLM_MASTER_KEY:-$(cat .litellm_key)}"
 export LITELLM_MASTER_KEY MEMEVA_LITELLM_USAGE="${MEMEVA_LITELLM_USAGE:-$PWD/litellm_usage.jsonl}"
 
-# 1) LiteLLM gateway on the docker bridge only
-if ! curl -sf -m 3 localhost:4000/health/liveliness >/dev/null; then
-  [ -d .venv ] || python3.12 -m venv .venv
-  .venv/bin/pip install -q 'litellm[proxy]==1.110.0' boto3
-  PYTHONPATH="$PWD" nohup .venv/bin/litellm --config litellm.yaml --host 0.0.0.0 --port 4000 > litellm.log 2>&1 &
-  for _ in $(seq 60); do curl -sf -m 3 localhost:4000/health/liveliness >/dev/null && break; sleep 2; done
-fi
+# 1) LiteLLM gateway (always (re)started with the persisted key)
+pkill -f "litellm --config" 2>/dev/null || true
+[ -d .venv ] || { python3.12 -m venv .venv && .venv/bin/pip install -q 'litellm[proxy]==1.110.0' boto3; }
+PYTHONPATH="$PWD" setsid nohup .venv/bin/litellm --config litellm.yaml --host 0.0.0.0 --port 4000 > litellm.log 2>&1 < /dev/null &
+for _ in $(seq 90); do curl -sf -m 3 localhost:4000/health/liveliness >/dev/null && break; sleep 2; done
+# smoke-check the key TDAM will use
+curl -sf -m 60 localhost:4000/v1/embeddings -H "Authorization: Bearer $LITELLM_MASTER_KEY" -H 'content-type: application/json' \
+  -d '{"model":"tdam-embed","input":"ping"}' >/dev/null || { echo "LiteLLM key/embedding check FAILED"; exit 1; }
 
 # 2) memory-core config (rendered with the LiteLLM key)
 sed "s#__LLM_KEY__#${LITELLM_MASTER_KEY}#g" tdai-gateway.yaml.tmpl > tdai-gateway.yaml

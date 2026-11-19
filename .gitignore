@@ -7,9 +7,11 @@ deploy/tdam/tdai-gateway.yaml
 deploy/tdam/.venv/
 deploy/tdam/*.log
 deploy/tdam/*.jsonl
+deploy/tdam/.litellm_key
 deploy/aws/.env
 *.tmp
 # planning scratch files (kept local)
 task_plan.md
 progress.md
 findings.md
+.litellm_key

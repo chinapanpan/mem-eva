@@ -83,6 +83,10 @@ class Run:
             res = be.wait_ready([self.ukey(u["user_id"]) for u in data["users"]], summ["last_write"], log)
             res["ready_at"] = time.time()
             write_json(self.dir / "readiness" / f"{store}.json", res)
+            empty = [u for u, c in (res.get("counts") or {}).items() if sum(c.values()) == 0]
+            if len(empty) > len(data["users"]) // 2:
+                raise SystemExit(f"[{store}] {len(empty)}/{len(data['users'])} users have NO long-term memory after "
+                                 f"waiting — extraction is failing (check the memory service's LLM/embedding logs).")
 
     # ── evaluate ──
     def evaluate(self, arms: list[str], workers: int = 4, coverage: bool = True) -> None:
