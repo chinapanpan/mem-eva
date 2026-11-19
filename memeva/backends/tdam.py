@@ -109,9 +109,13 @@ class TdamBackend(Backend):
         core = self.post("/v3/core/read", iso).get("content")
         return {"l1": l1, "l2": l2, "l3": 1 if core else 0}
 
-    def pipeline_idle(self) -> bool:
+    def pipeline_status(self) -> dict:
         st = self.post("/v2/pipeline/status", {})
-        return all(st.get(k, {}).get("idle", True) for k in ("l1", "l2", "l3"))
+        return {k: {"queued": st.get(k, {}).get("queued", 0), "running": st.get(k, {}).get("running", 0),
+                    "idle": st.get(k, {}).get("idle", True)} for k in ("l1", "l2", "l3")}
+
+    def pipeline_idle(self) -> bool:
+        return all(v["idle"] for v in self.pipeline_status().values())
 
     def wait_ready(self, user_ids, last_write_ts, log):
         t_start = time.time()
@@ -122,11 +126,13 @@ class TdamBackend(Backend):
         prev, stable, snapshots = None, 0, []
         while True:
             snap = {u: self.counts(u) for u in user_ids}
-            idle = self.pipeline_idle()
-            snapshots.append({"t": time.time(), "idle": idle, "total": _sum(snap)})
+            pst = self.pipeline_status()
+            idle = all(v["idle"] for v in pst.values())
+            snapshots.append({"t": time.time(), "idle": idle, "total": _sum(snap), "queue": pst})
             stable = stable + 1 if (snap == prev and idle) else 0
             prev = snap
-            log(f"[{self.name}] idle={idle} totals={_sum(snap)} stable={stable}")
+            log(f"[{self.name}] idle={idle} totals={_sum(snap)} queue(l1/l2/l3)="
+                f"{pst['l1']['queued']}/{pst['l2']['queued']}/{pst['l3']['queued']} stable={stable}")
             if stable >= int(self.c["stable_polls"]):
                 break
             if time.time() - t_start > float(self.c["max_wait_seconds"]):
