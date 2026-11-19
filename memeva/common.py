@@ -61,7 +61,7 @@ def read_json(path: Path | str) -> Any:
 def write_json(path: Path | str, obj: Any) -> None:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp = path.with_suffix(f"{path.suffix}.{os.getpid()}.{threading.get_ident()}.tmp")
     tmp.write_text(json.dumps(obj, ensure_ascii=False, indent=2, default=str))
     tmp.replace(path)
 
