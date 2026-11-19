@@ -33,9 +33,13 @@ for ds_dir in sorted(p for p in src.iterdir() if p.is_dir()):
     with (dst / f"{ds_dir.name}_per_question.csv").open("w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["arm", "qid", "user_id", "category", "correct", "coverage", "context_tokens", "retrieval_seconds"])
+        deleted = {r["user"] for rows in (probes.get("deletion") or {}).values() for r in rows}
         for arm_dir in sorted((ds_dir / "results").iterdir()):
             for p in sorted(arm_dir.glob("*.json")):
                 r = read_json(p)
+                # arms evaluated AFTER the destructive deletion probe would see empty memory for those users
+                if arm_dir.name == "agentcore_path" and r["user_id"] in deleted:
+                    continue
                 w.writerow([arm_dir.name, r["qid"], r["user_id"], r["category"], int(r["correct"]),
                             "" if r.get("coverage") is None else f"{sum(r['coverage'])}/{len(r['coverage'])}",
                             r["context_tokens"], f"{r['retrieval_seconds']:.4f}"])
