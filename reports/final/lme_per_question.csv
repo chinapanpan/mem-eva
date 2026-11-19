@@ -1,0 +1,15 @@
+arm,qid,user_id,category,correct,coverage,context_tokens,retrieval_seconds
+agentcore_spu,57f827a0,lme_57f827a0,single-session-preference,0,,4073,0.2008
+agentcore_spu,5a4f22c0,lme_5a4f22c0,knowledge-update,1,,4076,0.1818
+agentcore_spu,d596882b,lme_d596882b,single-session-assistant,1,,4075,0.1942
+agentcore_spu,dd2973ad,lme_dd2973ad,multi-session,0,,4073,0.2290
+agentcore_spu,f4f1d8a4,lme_f4f1d8a4,single-session-user,1,,4064,0.2651
+agentcore_spu,gpt4_93159ced,lme_gpt4_93159ced,temporal-reasoning,1,,4076,0.2093
+agentcore_spu,gpt4_93159ced_abs,lme_gpt4_93159ced_abs,abstention,1,,4073,0.1893
+none,57f827a0,lme_57f827a0,single-session-preference,0,,0,0.0000
+none,5a4f22c0,lme_5a4f22c0,knowledge-update,0,,0,0.0000
+none,d596882b,lme_d596882b,single-session-assistant,0,,0,0.0000
+none,dd2973ad,lme_dd2973ad,multi-session,0,,0,0.0000
+none,f4f1d8a4,lme_f4f1d8a4,single-session-user,0,,0,0.0000
+none,gpt4_93159ced,lme_gpt4_93159ced,temporal-reasoning,0,,0,0.0000
+none,gpt4_93159ced_abs,lme_gpt4_93159ced_abs,abstention,1,,0,0.0000

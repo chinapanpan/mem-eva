@@ -79,7 +79,7 @@ details summary{cursor:pointer;color:var(--ink2);font-size:13px;margin-top:8px}a
 
 <h2>写入→可检索 &amp; 检索性能</h2>
 <div class="card"><div class="legend" id="perfLeg"></div><svg id="perf" width="100%" height="280" role="img" aria-label="并发与 p95 时延"></svg>
-<p class="note">纵轴为 p95 检索时延（对数刻度）。AgentCore 在并发 ≥8 时受账户默认配额限制（RetrieveMemoryRecords 30 TPS，可申请提升）：SPU 每个请求调用 3 次 API，单次分层检索只调用 1 次。所有档位都是 0 错误。</p>
+<p class="note">纵轴为 p95 检索时延（对数刻度）。AgentCore 在并发 ≥8 时受账户默认配额限制（RetrieveMemoryRecords 30 TPS，可申请提升）：SPU 每个请求调用 3 次 API，单次分层检索只调用 1 次。CloudWatch 在这些时间窗口记录到了 Throttles，boto3 adaptive 重试会在客户端降速，所以表现为高延迟、0 错误。提额后的表现本次未测。</p>
 <details><summary>数据表</summary><table id="perfT"></table></details></div>
 
 <h2>成本（本次运行，按公开价格估算）</h2>
@@ -97,7 +97,7 @@ const lagA=D.lag.agentcore||{},lagT=D.lag.tdam||{};
 document.getElementById('tiles').innerHTML=[
 ['AgentCore 正确率',pct(ac.p),`${ac.k}/${ac.n} · 4K 事实覆盖 ${pct(ac.cov)}`],
 ['TDAM 最佳 arm 正确率',pct(tb.p),`${tb.k}/${tb.n} · ${tb.label}`],
-['写入→可检索 p50',`${(lagA.p50||0).toFixed(1)} s`,`AgentCore ${lagA.ready}/${lagA.n}；TDAM 30 分钟内 ${lagT.ready}/${lagT.n}`],
+['写入→可检索 p50（6 个用户）',`${(lagA.p50||0).toFixed(1)} s`,`AgentCore ${lagA.ready}/${lagA.n}（p95 ${(lagA.p95||0).toFixed(0)}s）；TDAM 30 分钟内 ${lagT.ready}/${lagT.n}`],
 ['密钥进入长期记忆',`${D.secrets.agentcore}/30`,`AgentCore（需要脱敏）；TDAM ${D.secrets.tdam}/30`]].map(t=>`<div class="card tile"><div class="k">${t[0]}</div><div class="v">${t[1]}</div><div class="d">${t[2]}</div></div>`).join('');
 // accuracy bars with CI
 (function(){const s=document.getElementById('acc'),w=s.clientWidth||900,lw=230,rw=w-lw-60,bh=22,gap=14,top=10;s.setAttribute('height',top+D.acc.length*(bh+gap)+26);
@@ -122,7 +122,7 @@ const sh=(D.sharing||[]).find(x=>x.arm==='tdam_shared_full')||{};const rows=[
 ['共享 team+agent 时的画像（L2/L3）',B(false,`30 个用户拿到 ${sh.distinct_preambles} 份相同的 persona`),B(true,'按 actor 划分 namespace')],
 ['伪造 user_id 越权读取',B(false,'可以（共享 Bearer key，读到了别人的 12 条记录）'),B(true,'IAM namespace 条件拒绝（AccessDenied）')],
 ['假 API secret 写入长期记忆',B(true,`${D.secrets.tdam}/30`),B(false,`${D.secrets.agentcore}/30（需要在写入前脱敏）`)],
-['删除后残留（0/30/120 秒）',B(true,'即时清零'),B('mid','30 秒内清零（最终一致）')],
+['删除后残留（0/30/120 秒）',B(true,'即时清零'),B('mid','0 秒仍可检索；30 秒 4/5、120 秒 5/5 清零（最终一致）')],
 ['写入重试是否幂等',B(false,'否（实测出现过重复写入）'),B(true,'是（clientToken）')],
 ['容器重启 / 节点故障',B('mid',`重启时 ${D.failover.failed}/${D.failover.requests} 失败，数据无丢失；单机，高可用需自建`),B(true,'托管服务')]];
 document.getElementById('sec').innerHTML='<tr><th>测试</th><th style="text-align:left">TDAM</th><th style="text-align:left">AgentCore</th></tr>'+rows.map(r=>`<tr><td>${r[0]}</td><td style="text-align:left">${r[1]}</td><td style="text-align:left">${r[2]}</td></tr>`).join('')})();
