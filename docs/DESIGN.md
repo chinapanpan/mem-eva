@@ -38,7 +38,7 @@ v0 里的 Recall@K 和 MRR 被删掉了：两个系统的记录粒度差别很�
 
 ## 3. 数据集
 - **web3_zh**（主数据集）：30 个用户，每人 8 个会话，共 120 题，分 7 类（fact / preference / update / temporal / multi_session / abstention / cross_lingual）。事实、时间线和答案由带种子的 schema 生成；对话由 Sonnet 5.5 编写，并校验每个事实的关键串原样出现。每个用户的对话约 9K tokens。
-- **LongMemEval-S**：7 题（每类 1 题，seed 20261119），每题约 115K tokens，用来和公开基准、AgentMemBench 对照。
+- **LongMemEval-S**：7 题（每类 1 题，seed 20261119），每题约 10 万 tokens（cl100k），用来和公开基准、AgentMemBench 对照。
 
 ## 4. 流程
 `provision → ingest → wait → evaluate → report → probes`

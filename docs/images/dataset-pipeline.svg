@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 640" width="1600" height="640">
+<defs><style>text{font-family:"Noto Sans CJK SC","PingFang SC","Microsoft YaHei",sans-serif;fill:#111827}.t{font-size:15px;font-weight:700}.s{font-size:13px;fill:#374151}.xs{font-size:12px;fill:#6b7280}.h{font-size:18px;font-weight:700}.lb{font-size:12.5px}.mono{font-family:"DejaVu Sans Mono",monospace;font-size:13.5px;font-weight:700}</style>
+<marker id="mg" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#6b7280"/></marker>
+<marker id="mb" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#2563eb"/></marker>
+<marker id="mo" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#ea580c"/></marker>
+<filter id="sh" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.08"/></filter></defs>
+<rect width="1600" height="640" fill="#ffffff"/>
+<text x="800" y="40" class="h" text-anchor="middle">web3_zh 数据集生成流程：事实由程序生成，LLM 只写对话</text>
+<path d="M 260,240.0 L 298,240.0" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#mg)"/>
+<path d="M 520,240.0 L 558,240.0" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#mg)"/>
+<path d="M 780,240.0 L 818,240.0" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#mg)"/>
+<path d="M 1040,240.0 L 1078,240.0" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#mg)"/>
+<path d="M 1300,240.0 L 1338,240.0" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#mg)"/>
+<path d="M 930.0,120 L 930.0,94 L 670.0,94 L 670.0,118" fill="none" stroke="#ea580c" stroke-width="1.8" stroke-dasharray="6,4" marker-end="url(#mo)"/>
+<rect x="690.5" y="72" width="219" height="19" rx="4" fill="#ffffff" opacity="0.95"/>
+<text x="800.0" y="86" class="lb" text-anchor="middle" style="fill:#ea580c">不通过 → 重新生成（最多 4 次）</text>
+<rect x="40" y="120" width="220" height="240" rx="10" fill="#ffffff" stroke="#9ca3af" stroke-width="1.5" filter="url(#sh)"/>
+<rect x="40" y="120" width="220" height="6" rx="3" fill="#6b7280"/>
+<text x="150.0" y="158" class="t" text-anchor="middle">① 生成用户档案</text>
+<text x="150.0" y="178" class="xs" text-anchor="middle">（固定随机种子 20261119）</text>
+<line x1="60" y1="200" x2="240" y2="200" stroke="#9ca3af" stroke-width="1" opacity="0.6"/>
+<text x="150.0" y="229.0" class="s" text-anchor="middle">常用链 · 风险偏好 · VIP 等级</text>
+<text x="150.0" y="251.0" class="s" text-anchor="middle">杠杆上限（含后续修改）</text>
+<text x="150.0" y="273.0" class="s" text-anchor="middle">提币白名单（含后续更换）</text>
+<text x="150.0" y="295.0" class="s" text-anchor="middle">不喜欢的品类 · 报税工具</text>
+<text x="150.0" y="317.0" class="s" text-anchor="middle">行业会议 · 3 个子账户</text>
+<text x="150.0" y="339.0" class="s" text-anchor="middle">宠物名 · 假 API secret</text>
+<rect x="300" y="120" width="220" height="240" rx="10" fill="#ffffff" stroke="#9ca3af" stroke-width="1.5" filter="url(#sh)"/>
+<rect x="300" y="120" width="220" height="6" rx="3" fill="#6b7280"/>
+<text x="410.0" y="158" class="t" text-anchor="middle">② 把事实分配到 8 个会话</text>
+<line x1="320" y1="180" x2="500" y2="180" stroke="#9ca3af" stroke-width="1" opacity="0.6"/>
+<text x="410.0" y="252.0" class="s" text-anchor="middle">会话间隔 3–9 天；</text>
+<text x="410.0" y="274.0" class="s" text-anchor="middle">“更新”类事实一定</text>
+<text x="410.0" y="296.0" class="s" text-anchor="middle">在原值之后</text>
+<rect x="560" y="120" width="220" height="240" rx="10" fill="#eff6ff" stroke="#60a5fa" stroke-width="1.5" filter="url(#sh)"/>
+<rect x="560" y="120" width="220" height="6" rx="3" fill="#2563eb"/>
+<text x="670.0" y="158" class="t" text-anchor="middle" style="fill:#1e40af">③ LLM 写对话</text>
+<text x="670.0" y="178" class="xs" text-anchor="middle" style="fill:#1e40af">（Claude Sonnet 5.5）</text>
+<line x1="580" y1="200" x2="760" y2="200" stroke="#60a5fa" stroke-width="1" opacity="0.6"/>
+<text x="670.0" y="262.0" class="s" text-anchor="middle">输入：会话日期 +</text>
+<text x="670.0" y="284.0" class="s" text-anchor="middle">日常话题 + 需带出的事实；</text>
+<text x="670.0" y="306.0" class="s" text-anchor="middle">每会话 5–8 轮</text>
+<rect x="820" y="120" width="220" height="240" rx="10" fill="#fff7ed" stroke="#fb923c" stroke-width="1.5" filter="url(#sh)"/>
+<rect x="820" y="120" width="220" height="6" rx="3" fill="#ea580c"/>
+<text x="930.0" y="158" class="t" text-anchor="middle" style="fill:#9a3412">④ 逐会话校验</text>
+<line x1="840" y1="180" x2="1020" y2="180" stroke="#fb923c" stroke-width="1" opacity="0.6"/>
+<text x="930.0" y="241.0" class="s" text-anchor="middle">关键字符串必须原样出现</text>
+<text x="930.0" y="263.0" class="s" text-anchor="middle">在用户发言中（地址、VIP3、</text>
+<text x="930.0" y="285.0" class="s" text-anchor="middle">5倍、下周六…）；</text>
+<text x="930.0" y="307.0" class="s" text-anchor="middle">报税工具一句要求用英文</text>
+<rect x="1080" y="120" width="220" height="240" rx="10" fill="#ffffff" stroke="#9ca3af" stroke-width="1.5" filter="url(#sh)"/>
+<rect x="1080" y="120" width="220" height="6" rx="3" fill="#6b7280"/>
+<text x="1190.0" y="158" class="t" text-anchor="middle">⑤ 程序生成问题与标准答案</text>
+<line x1="1100" y1="180" x2="1280" y2="180" stroke="#9ca3af" stroke-width="1" opacity="0.6"/>
+<text x="1190.0" y="241.0" class="s" text-anchor="middle">答案由档案计算，</text>
+<text x="1190.0" y="263.0" class="s" text-anchor="middle">不经过 LLM；</text>
+<text x="1190.0" y="285.0" class="s" text-anchor="middle">时间题按会话日期</text>
+<text x="1190.0" y="307.0" class="s" text-anchor="middle">换算具体日期</text>
+<path d="M 1350,120 L 1538,120 L 1560,142 L 1560,350 Q 1560,360 1550,360 L 1350,360 Q 1340,360 1340,350 L 1340,130 Q 1340,120 1350,120 Z" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.6" filter="url(#sh)"/>
+<path d="M 1538,120 L 1538,142 L 1560,142" fill="#e5e7eb" stroke="#6b7280" stroke-width="1.2"/>
+<text x="1450.0" y="150" class="xs" text-anchor="middle">输出</text>
+<text x="1450.0" y="178" class="mono" text-anchor="middle">data/web3_zh/dataset.json</text>
+<line x1="1360" y1="196" x2="1540" y2="196" stroke="#9ca3af" stroke-width="1"/>
+<text x="1450.0" y="232" class="s" text-anchor="middle">30 个用户 × 8 会话</text>
+<text x="1450.0" y="262" class="s" text-anchor="middle">约 27 万 tokens</text>
+<text x="1450.0" y="292" class="s" text-anchor="middle">120 题 · 7 类</text>
+<text x="1450.0" y="322" class="s" text-anchor="middle">259 次 LLM 调用 · 约 $5</text>
+<rect x="40" y="410" width="1040" height="120" rx="12" fill="#f9fafb" stroke="#9ca3af" stroke-width="1.5" stroke-dasharray="5,4"/>
+<text x="60" y="438" class="t" text-anchor="start">7 类题目（每用户 4 题，类别轮转）</text>
+<rect x="60.0" y="456" width="130" height="52" rx="8" fill="#ffffff" stroke="#9ca3af" stroke-width="1.5"/>
+<text x="125.0" y="487" class="t" text-anchor="middle">事实 18</text>
+<rect x="205.0" y="456" width="130" height="52" rx="8" fill="#ffffff" stroke="#9ca3af" stroke-width="1.5"/>
+<text x="270.0" y="487" class="t" text-anchor="middle">偏好 17</text>
+<rect x="350.0" y="456" width="130" height="52" rx="8" fill="#ffffff" stroke="#9ca3af" stroke-width="1.5"/>
+<text x="415.0" y="487" class="t" text-anchor="middle">更新 17</text>
+<rect x="495.0" y="456" width="130" height="52" rx="8" fill="#ffffff" stroke="#9ca3af" stroke-width="1.5"/>
+<text x="560.0" y="487" class="t" text-anchor="middle">时间 17</text>
+<rect x="640.0" y="456" width="130" height="52" rx="8" fill="#ffffff" stroke="#9ca3af" stroke-width="1.5"/>
+<text x="705.0" y="487" class="t" text-anchor="middle">跨会话 17</text>
+<rect x="785.0" y="456" width="130" height="52" rx="8" fill="#ffffff" stroke="#9ca3af" stroke-width="1.5"/>
+<text x="850.0" y="487" class="t" text-anchor="middle">拒答 17</text>
+<rect x="930.0" y="456" width="130" height="52" rx="8" fill="#ffffff" stroke="#9ca3af" stroke-width="1.5"/>
+<text x="995.0" y="487" class="t" text-anchor="middle">跨语言 17</text>
+<rect x="1120" y="410" width="440" height="120" rx="12" fill="#f9fafb" stroke="#9ca3af" stroke-width="1.5" stroke-dasharray="5,4"/>
+<text x="1140" y="438" class="t" text-anchor="start">额外探针（不计入正确率）</text>
+<text x="1140" y="474" class="s" text-anchor="start">隔离探针：唯一钱包地址 / 宠物名</text>
+<text x="1140" y="504" class="s" text-anchor="start">泄漏探针：假 secret（mx_secret_…，非真实格式）</text>
+<rect x="40" y="560" width="1520" height="48" rx="8" fill="#ffffff" stroke="#e5e7eb" stroke-width="1.5"/>
+<text x="60" y="589" class="t" text-anchor="start">图例</text>
+<rect x="130" y="576" width="22" height="16" rx="3" fill="#ffffff" stroke="#9ca3af" stroke-width="1.5"/>
+<text x="162" y="589" class="xs" text-anchor="start">程序 / 确定性步骤</text>
+<rect x="330" y="576" width="22" height="16" rx="3" fill="#eff6ff" stroke="#60a5fa" stroke-width="1.5"/>
+<text x="362" y="589" class="xs" text-anchor="start">LLM 步骤</text>
+<rect x="530" y="576" width="22" height="16" rx="3" fill="#fff7ed" stroke="#fb923c" stroke-width="1.5"/>
+<text x="562" y="589" class="xs" text-anchor="start">校验 / 重试</text>
+<line x1="730" y1="584" x2="764" y2="584" stroke="#6b7280" stroke-width="2" marker-end="url(#mg)"/>
+<text x="774" y="589" class="xs" text-anchor="start">实线：流程</text>
+<line x1="880" y1="584" x2="914" y2="584" stroke="#ea580c" stroke-width="1.8" stroke-dasharray="6,4" marker-end="url(#mo)"/>
+<text x="924" y="589" class="xs" text-anchor="start">虚线：校验失败回退</text>
+</svg>

@@ -15,7 +15,7 @@ P = W.get("probes_full", {})
 
 ARM_LABEL = {"none": "无记忆", "tdam_full": "TDAM full（每用户一个 team）", "tdam_l1": "TDAM L1（每用户一个 team）",
              "tdam_shared_full": "TDAM full（共享 team）", "tdam_shared_l1": "TDAM L1（共享 team）",
-             "agentcore_spu": "AgentCore SPU", "agentcore_path": "AgentCore 单次检索"}
+             "agentcore_spu": "AgentCore SPU", "agentcore_path": "AgentCore 单次分层检索"}
 FAMILY = {a: ("agentcore" if a.startswith("agentcore") else "tdam" if a.startswith("tdam") else "none") for a in ARM_LABEL}
 CATS = [("abstention", "拒答"), ("cross_lingual", "跨语言"), ("fact", "事实"), ("multi_session", "跨会话"),
         ("preference", "偏好"), ("temporal", "时间"), ("update", "更新")]
@@ -28,7 +28,7 @@ heat = [{"arm": a, "label": ARM_LABEL[a], "cells": [{"cat": c, "name": n, **W["b
         for a in [r["arm"] for r in acc]]
 perf = P.get("perf", {})
 perf_series = [{"arm": a, "label": ARM_LABEL[a], "pts": [{"c": int(c), **v} for c, v in sorted(perf[a].items(), key=lambda x: int(x[0]))]}
-               for a in ["agentcore_spu", "tdam_l1", "agentcore_path", "tdam_full"] if a in perf]
+               for a in ["agentcore_spu", "tdam_l1", "agentcore_path", "tdam_full", "tdam_shared_l1"] if a in perf]
 lag = P.get("lag", {})
 lme = {a: f"{s['correct']}/{s['n']}" for a, s in L.get("arms", {}).items()}
 DATA = {"acc": acc, "heat": heat, "perf": perf_series, "lag": lag, "lme": lme, "pair": W.get("pairwise", {}),
@@ -43,10 +43,10 @@ HTML = r"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta n
 <title>mem-eva：TencentDB Agent Memory vs AgentCore Memory 评测</title>
 <style>
 .viz-root{color-scheme:light;--page:#f9f9f7;--surface-1:#fcfcfb;--ink:#0b0b0b;--ink2:#52514e;--muted:#898781;--grid:#e1e0d9;--axis:#c3c2b7;
- --ring:rgba(11,11,11,.10);--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--none:#898781;--good:#006300;--bad:#c62828;--warn:#8a5a00;
+ --ring:rgba(11,11,11,.10);--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#e87ba4;--none:#898781;--good:#006300;--bad:#c62828;--warn:#8a5a00;
  --seq0:#f1f6fd;--seq1:#cde2fb;--seq2:#9ec5f4;--seq3:#5598e7;--seq4:#256abf;--seq5:#104281}
 @media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])) .viz-root{color-scheme:dark;--page:#0d0d0d;--surface-1:#1a1a19;--ink:#f0efec;--ink2:#c3c2b7;
- --grid:#2c2c2a;--axis:#383835;--ring:rgba(255,255,255,.10);--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--good:#0ca30c;--bad:#e66767;--warn:#c98500}}
+ --grid:#2c2c2a;--axis:#383835;--ring:rgba(255,255,255,.10);--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--good:#0ca30c;--bad:#e66767;--warn:#c98500}}
 *{box-sizing:border-box}body{margin:0}
 .viz-root{background:var(--page);color:var(--ink);font:15px/1.6 -apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;min-height:100vh}
 .wrap{max-width:1080px;margin:0 auto;padding:32px 20px 64px}
@@ -70,7 +70,7 @@ details summary{cursor:pointer;color:var(--ink2);font-size:13px;margin-top:8px}a
 <div class="card"><div class="legend"><span><i class="sw" style="background:var(--s1)"></i>AgentCore</span><span><i class="sw" style="background:var(--s2)"></i>TDAM</span><span><i class="sw" style="background:var(--none)"></i>无记忆基线</span></div>
 <svg id="acc" width="100%" height="270" role="img" aria-label="各方案正确率"></svg>
 <details><summary>数据表</summary><table id="accT"></table></details>
-<p class="note">LongMemEval-S（7 题，仅供参考）：AgentCore __LME_AC__，TDAM L1 __LME_T1__，TDAM full __LME_TF__，无记忆 __LME_N__。</p>
+<p class="note">LongMemEval-S（7 题，仅供参考；TDAM 为每用户一个 team）：AgentCore SPU __LME_AC__，TDAM L1 __LME_T1__，TDAM full __LME_TF__，无记忆 __LME_N__。</p>
 <p class="note">配对 McNemar 检验（AgentCore SPU vs TDAM 最佳 arm `tdam_shared_l1`）：只有 AgentCore 答对 26 题，只有 TDAM 答对 2 题，p &lt; 0.001。</p></div>
 
 <h2>分类别答对题数</h2>
@@ -110,7 +110,7 @@ const lagA=D.lag.agentcore||{},lagT=D.lag.tdam||{};
 document.getElementById('tiles').innerHTML=[
 ['AgentCore 正确率',pct(ac.p),`${ac.k}/${ac.n} · 4K 事实覆盖 ${pct(ac.cov)}`],
 ['TDAM 最佳 arm 正确率',pct(tb.p),`${tb.k}/${tb.n} · ${tb.label}`],
-['写入完成→可检索 p50（6 个用户）',`${(lagA.p50||0).toFixed(1)} s`,`AgentCore ${lagA.ready}/${lagA.n}（p95 ${(lagA.p95||0).toFixed(0)}s）；TDAM 30 分钟内 ${lagT.ready}/${lagT.n}`],
+['写入完成→可检索 p50（6 个用户）',`${(lagA.p50||0).toFixed(1)} s`,`AgentCore ${lagA.ready}/${lagA.n}（最慢 ${(lagA.max||0).toFixed(0)}s）；TDAM 30 分钟内 ${lagT.ready}/${lagT.n}`],
 ['密钥进入长期记忆',`${D.secrets.agentcore}/30`,`AgentCore（需要脱敏）；TDAM ${D.secrets.tdam}/30`]].map(t=>`<div class="card tile"><div class="k">${t[0]}</div><div class="v">${t[1]}</div><div class="d">${t[2]}</div></div>`).join('');
 // accuracy bars with CI
 (function(){const s=document.getElementById('acc'),w=s.clientWidth||900,lw=230,rw=w-lw-60,bh=22,gap=14,top=10;s.setAttribute('height',top+D.acc.length*(bh+gap)+26);
@@ -146,7 +146,7 @@ document.getElementById('lagT').innerHTML='<tr><th>系统</th><th>30 分钟内�
 const w=D.write||{},wr=[['AgentCore CreateEvent（每 ≤20 条消息一次）','agentcore'],['TDAM conversation/add（每轮一次，同步计算 embedding）','tdam']].map(([n,k])=>{const x=w[k]||{};return `<tr><td>${n}</td><td>${x.n||'—'}</td><td>${x.p50==null?'—':x.p50.toFixed(3)+' s'}</td><td>${x.p95==null?'—':x.p95.toFixed(3)+' s'}</td><td>${x.p99==null?'—':x.p99.toFixed(3)+' s'}</td></tr>`}).join('');
 document.getElementById('writeT').innerHTML='<tr><th>写入调用</th><th>调用次数</th><th>p50</th><th>p95</th><th>p99</th></tr>'+wr})();
 // retrieval perf: small multiples p50 / p95 (same log scale, one metric per chart)
-(function(){const cols=['--s1','--s2','--s3','--s4'];
+(function(){const cols=['--s1','--s2','--s3','--s4','--s5'];
 document.getElementById('perfLeg').innerHTML=D.perf.map((p,i)=>`<span><i class="sw" style="background:var(${cols[i]})"></i>${p.label}</span>`).join('');
 function draw(id,key){const s=document.getElementById(id),w=s.clientWidth||460,l=46,r=16,t=10,h=200;
 const cs=[1,8,32],X=c=>l+cs.indexOf(c)*(w-l-r)/2,lo=Math.log10(.05),hi=Math.log10(50),Y=v=>t+h-(Math.log10(Math.max(v,.05))-lo)/(hi-lo)*h;

@@ -11,7 +11,7 @@
 | `TDAI_GATEWAY_API_KEY` | 空（脚本默认关闭） | 随机 key | v3 数据面不带 Bearer 返回 401；同时也是生产部署的最低安全要求 |
 | 召回条数 | `recall.maxResults: 5`、`scoreThreshold: 0.3`（v1 `/recall`） | v3 `atomic/search limit=50`，无阈值，统一装填 4K tokens | 与 AgentCore 相同的候选上限和上下文预算。**对 TDAM 有利**（默认只给 5 条） |
 | 召回组装 | `core/hooks/auto-recall.ts`：L3 persona + L2 scene navigation + L1 relevant memories | `tdam_full` 按同样顺序组装 | 复刻原生注入方式；另设 `tdam_l1` 只用 L1 |
-| pipeline 定时器 | `everyNConversations 5`、`l1IdleTimeoutSeconds 600`、`l2DelayAfterL1 90`、`l2MinInterval 900` | **不改** | 保持默认；评测前等待 ≥660s 且 pipeline idle、计数稳定 |
+| pipeline 定时器 | `everyNConversations 5`、`l1IdleTimeoutSeconds 600`、`l2DelayAfterL1 90`、`l2MinInterval 900` | **不改** | 保持默认；评测前等待 ≥900s，且 pipeline 空闲、计数连续 3 次稳定 |
 | 存储 | SQLite（standalone） | **不改** | 官方默认。MongoDB 后端是实验特性；TCVDB 只在腾讯云上可用 |
 | `persona.triggerMode` | `current` | **不改** | JEV 即时更新依赖 TokenHub 外部服务 |
 

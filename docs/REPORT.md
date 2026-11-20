@@ -7,13 +7,13 @@
 
 1. **记忆问答质量：AgentCore 明显领先。** 自建的 web3_zh 数据集共 120 题。AgentCore（Semantic + Preference + Summary）答对 96 题，正确率 **80.0%**（95% CI 72–86%）。TDAM 表现最好的配置答对 72 题，**60.0%**（51–68%）。配对 McNemar 检验中，只有 AgentCore 答对的题有 26 道，只有 TDAM 答对的有 2 道，p < 0.001。真正送进回答模型的 4K 上下文里，AgentCore 覆盖了 95.1% 的标注事实，TDAM 为 71.8%。
 2. **TDAM 的多租户隔离需要使用方自己设计，任何一种拓扑都要付出代价。** TDAM v3 的 L2 场景和 L3 画像只按 `team + agent` 划分作用域，这是源码中明确写下的设计。所有终端用户共用一个 agent 时，30 个用户拿到的是**同一份**由全部用户对话合成的画像；给每个用户单独分配一个 team 可以隔离画像，但同样的对话抽出的 L1 少了 26%（381 vs 518，两次检查时 L1 队列都已清空），正确率降到 40%。AgentCore 按 `actorId` 划分 namespace，不存在这个取舍。
-3. **身份隔离：AgentCore 可以用 IAM 强制，TDAM 依赖应用层自觉。** TDAM 的数据面只用一个共享的 Bearer key，调用方改一下 `user_id` 就能读到别人的记忆（实测可读）。AgentCore 给 IAM 角色加上 `bedrock-agentcore:namespace` 条件后，访问其他租户直接返回 `AccessDenied`（实测）。
+3. **身份隔离：AgentCore 可以用 IAM 强制，TDAM 依赖应用层自觉。** TDAM 的数据面只用一个共享的 Bearer key，调用方改一下 `user_id` 就能读到别人的记忆（实测可读）。AgentCore 默认权限下同样能读任意 actor，但可以给 IAM 角色加上 `bedrock-agentcore:namespace` 条件，访问其他租户直接返回 `AccessDenied`（实测）。这个条件只对精确 `namespace` 检索生效，本次测得的两种检索方式都用了 `namespacePath`，“IAM 隔离 + 精确 namespace 检索”的组合未测。
 4. **写入后多久可检索：AgentCore p50 10.5 秒、最慢 21 秒（6/6）；TDAM 在 30 分钟内 0/6。** 这项只测了 6 个用户、一种对话（产品咨询中夹带一句"帮我记一下邀请码"）。TDAM 的抽取器对这类会话返回 `empty_scenes`，邀请码一直停在原始对话层（L0）。在主数据集上 TDAM 能正常抽取，所以这一条应理解为"特定对话形态下会漏记"。另外，即便抽取正常，TDAM 默认也要等 ≥600 秒的空闲超时才会处理最后几轮。
 5. **AgentCore 有一项明显的反例：密钥会进入长期记忆。** 数据集里每个用户都贴了一个假 API secret，AgentCore 内置策略在 30/30 个用户的长期记忆里原样保存了它，TDAM 是 0/30。生产环境使用 AgentCore 时，必须在 `CreateEvent` 之前脱敏，或者使用自定义策略 prompt / Guardrails。
-6. **并发检索：低并发时两者在同一量级；高并发时 AgentCore 先撞上账户默认配额。** 并发 1 时，TDAM 的 p50 为 0.09–0.13 秒，AgentCore 为 0.17–0.19 秒。`RetrieveMemoryRecords` 的默认配额是每账户 30 TPS（可申请提升）。三策略并行检索每个请求要调 3 次 API；并发 8 以上时 CloudWatch 记录到了 Throttles（每分钟 5–38 次），随后 boto3 的 adaptive 重试模式在客户端主动降速，表现为秒级延迟，但没有报错。改成一次分层检索（`agentcore_path`）后，质量基本不变（76/100 vs 78/100），调用量降到 1/3。生产上线前需要申请提额。
+6. **并发检索：低并发时两者在同一量级；高并发时 AgentCore 先撞上账户默认配额。** 并发 1 时，TDAM 的 p50 为 0.09–0.13 秒，AgentCore 为 0.17–0.19 秒。`RetrieveMemoryRecords` 的默认配额是每账户 30 TPS（可申请提升）。三策略并行检索每个请求要调 3 次 API；并发 8 以上时 CloudWatch 记录到了 Throttles（每分钟 5–38 次），随后 boto3 的 adaptive 重试模式在客户端主动降速，表现为十几到三十几秒的 p95，但没有报错。改成单次分层检索（`agentcore_path`）后，在同一批 100 题上没有检出质量差异（76 vs 78），调用量降到 1/3，但它与 IAM namespace 隔离不能同时使用。生产上线前需要申请提额。
 7. **成本（口径不同，仅供量级参考）：** AgentCore 这次运行约 **$1.56**，其中包含 1,832 条长期记录一个月的存储费；TDAM 抽取 30 个用户历史的内部 LLM 和 embedding 费用约 **$2.6**，这是一次性的（两种拓扑合计 $5.25，Haiku 输入 token 是原始对话的 50 倍以上），另外还要加上 EC2/EBS、高可用和运维人力。
 
-> 一句话：在这个交易所助手场景里，AgentCore 的记忆质量更高，隔离由 IAM 保证，写入后 10–20 秒即可检索，并且不需要运维；需要额外处理的是敏感信息脱敏和检索配额。TDAM 在本地数据主权、单机低延迟、即时删除和"不把密钥写进记忆"这几点上表现更好。
+> 一句话：在这个交易所助手场景里，AgentCore 的记忆质量更高，隔离可以用 IAM 收紧（需配合精确 namespace 检索），写入后 p50 约 10 秒、最慢 21 秒即可检索，并且不需要运维；需要额外处理的是敏感信息脱敏和检索配额。TDAM 在本地数据主权、单机低延迟、即时删除和"不把密钥写进记忆"这几点上表现更好。
 
 ---
 
@@ -25,7 +25,7 @@
 | 部署 | 独立 EC2 m7i.xlarge，standalone + SQLite，Docker | 托管，同区域 API |
 | 抽取 | Claude Haiku 5.5（经 LiteLLM 提供 OpenAI 兼容接口），`promptMode: chat` | 内置策略（模型由服务托管） |
 | 检索 | BM25（jieba）+ Titan V2 向量 + RRF | 语义检索，Semantic / UserPreference / Summary 三个 namespace |
-| 组装 | `tdam_full` = L3 persona + L2 scene navigation + L1（复刻原生 auto-recall）；`tdam_l1` = 只用 L1 | 三个 namespace 结果按名次交错合并；`agentcore_path` = 一次分层检索 |
+| 组装 | `tdam_full` = L3 persona + L2 scene navigation + L1（复刻原生 auto-recall）；`tdam_l1` = 只用 L1 | 三个 namespace 结果按名次交错合并；`agentcore_path` = 单次分层检索 |
 | 拓扑 | `tdam_*`：每个用户一个 team（画像私有）；`tdam_shared_*`：所有用户共用一个 team | 每个用户一个 actorId |
 
 所有 arm 共用：回答模型 Haiku 5.5、评分模型 Sonnet 5.5（LongMemEval 官方模板，要求最后一行输出 `VERDICT`）、4,096 tokens 上下文预算、候选上限 50（`config.yaml: top_k`）。
@@ -62,7 +62,7 @@ runner 是另一台 EC2，通过 VPC 私网访问 TDAM，访问 AgentCore 走同
 - **偏好题对两者都难**（评分要求回答至少用到两条偏好，并且不违背任何一条）。
 - **时间题主要受数据集歧义影响**："下周X" 是在周中说的，标准答案按"周一开始的下一周"计算，但很多记忆把它解析成了最近的那个 X。用确定性的日期匹配来看：AgentCore 有 13/17 道题给出了标准日期或标准日期 −7 天（其中 10 道是 −7 天），TDAM 为 5–7 道。表中保留的是原始评分。
 
-### 2.2 LongMemEval-S（7 题，每类 1 题，每题约 115K tokens 历史）
+### 2.2 LongMemEval-S（7 题，每类 1 题，每题约 10 万 tokens（cl100k）历史）
 
 | arm | 答对/7 |
 |---|---:|
@@ -119,10 +119,10 @@ runner 是另一台 EC2，通过 VPC 私网访问 TDAM，访问 AgentCore 走同
 | tdam_l1 | 1 | 0.133 / 0.174，7.3 rps | 0.131 / 0.200，54 rps | 0.383 / 0.540，80 rps |
 | tdam_full | 3（L1 + persona + scene，并行） | 0.093 / 0.115，9.5 rps | 0.125 / 0.188，58 rps | 0.400 / 0.515，77 rps |
 | agentcore_spu | 3（三个 namespace，并行） | 0.190 / 0.296，4.3 rps | 0.49 / 20.8，1.3 rps | 8.1 / 33.5，2.4 rps |
-| agentcore_path | 1（一次分层检索） | 0.174 / 0.231，5.5 rps | 0.220 / 2.33，12.9 rps | 0.534 / 17.3，11.2 rps |
+| agentcore_path | 1（单次分层检索） | 0.174 / 0.231，5.5 rps | 0.220 / 2.33，12.9 rps | 0.534 / 17.3，11.2 rps |
 
 解读：
-- **并发 1**：两者在同一量级，TDAM 每次检索快大约 0.05–0.1 秒。TDAM 和 runner 在同一 VPC 内，AgentCore 走区域 API。
+- **并发 1**：两者在同一量级，TDAM 每次检索快约 0.04–0.10 秒。TDAM 和 runner 在同一 VPC 内，AgentCore 走区域 API。
 - **并发 ≥8 时 AgentCore 受配额限制**：这段时间里 CloudWatch `Throttles`（Operation=RetrieveMemoryRecords）每分钟记录到 5–38 次，被接受的调用只有每秒 5–13 次，低于 30 TPS。原因是 boto3 的 adaptive 重试模式在收到限流后会在客户端主动降低发送速率，结果就是延迟升高但没有报错。所以这几档反映的是**默认配额加客户端退避**的组合。提额以后能到多少，本次没有测，需要提额后复测。
 - **TDAM 单节点**：32 并发下 0 错误（p99 0.64 秒，最大 8.6 秒），但它只有一个节点，节点本身挂掉的影响见 §6。
 

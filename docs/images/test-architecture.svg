@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1080" width="1600" height="1080">
+<defs><style>text{font-family:"Noto Sans CJK SC","PingFang SC","Microsoft YaHei",sans-serif;fill:#111827}.t{font-size:15px;font-weight:700}.s{font-size:13px;fill:#374151}.xs{font-size:12px;fill:#6b7280}.h{font-size:18px;font-weight:700}.lb{font-size:12.5px}</style>
+<marker id="mg" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#6b7280"/></marker>
+<marker id="mb" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#2563eb"/></marker>
+<marker id="mo" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#ea580c"/></marker>
+<filter id="sh" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.08"/></filter></defs>
+<rect width="1600" height="1080" fill="#ffffff"/>
+<text x="800" y="40" class="h" text-anchor="middle">mem-eva 基准评测：部署拓扑与评测流程</text>
+<rect x="20" y="62" width="1560" height="1000" rx="14" fill="none" stroke="#9ca3af" stroke-width="1.5" stroke-dasharray="6,4"/>
+<text x="40" y="84" class="t" text-anchor="start" style="fill:#374151">AWS Region · us-east-1</text>
+<text x="40" y="114" class="h" text-anchor="start">A  部署拓扑</text>
+<rect x="40" y="124" width="920" height="436" rx="12" fill="#f9fafb" stroke="#9ca3af" stroke-width="1.5" stroke-dasharray="5,4"/>
+<text x="60" y="148" class="s" text-anchor="start">Default VPC · 两台 EC2 均经 SSM 管理，无公网入站</text>
+<rect x="1130" y="124" width="430" height="436" rx="12" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.5" stroke-dasharray="5,4"/>
+<text x="1150" y="148" class="s" text-anchor="start" style="fill:#1d4ed8">AWS 托管服务（同 region）</text>
+<rect x="70" y="230" width="300" height="240" rx="10" fill="#ffffff" stroke="#9ca3af" stroke-width="1.5" filter="url(#sh)"/>
+<text x="220" y="262" class="t" text-anchor="middle">Runner EC2（m7i.large）</text>
+<text x="220" y="286" class="xs" text-anchor="middle">mem-eva harness（Python）</text>
+<rect x="100" y="306" width="240" height="36" rx="6" fill="#f3f4f6" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="220" y="329" class="s" text-anchor="middle">adapters</text>
+<rect x="100" y="356" width="240" height="36" rx="6" fill="#f3f4f6" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="220" y="379" class="s" text-anchor="middle">judge</text>
+<rect x="100" y="406" width="240" height="36" rx="6" fill="#f3f4f6" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="220" y="429" class="s" text-anchor="middle">probes</text>
+<rect x="600" y="190" width="330" height="340" rx="10" fill="#fff7ed" stroke="#fb923c" stroke-width="1.5" filter="url(#sh)"/>
+<text x="765" y="218" class="t" text-anchor="middle" style="fill:#9a3412">TDAM EC2（m7i.xlarge）</text>
+<rect x="620" y="236" width="290" height="128" rx="8" fill="#ffffff" stroke="#fdba74" stroke-width="1.5"/>
+<text x="765" y="256" class="xs" text-anchor="middle">Docker 容器</text>
+<text x="765" y="282" class="t" text-anchor="middle">TencentDB Agent Memory</text>
+<text x="765" y="306" class="s" text-anchor="middle">memory-core</text>
+<text x="765" y="332" class="s" text-anchor="middle">（SQLite + BM25 + 向量）</text>
+<text x="765" y="352" class="xs" text-anchor="middle">:8420</text>
+<rect x="620" y="400" width="290" height="100" rx="8" fill="#ffffff" stroke="#fdba74" stroke-width="1.5"/>
+<text x="765" y="422" class="xs" text-anchor="middle">进程</text>
+<text x="765" y="450" class="t" text-anchor="middle">LiteLLM 网关</text>
+<text x="765" y="476" class="s" text-anchor="middle">（OpenAI 兼容）</text>
+<rect x="1160" y="190" width="370" height="120" rx="10" fill="#ffffff" stroke="#60a5fa" stroke-width="1.5" filter="url(#sh)"/>
+<text x="1345" y="232" class="t" text-anchor="middle" style="fill:#1e40af">Amazon Bedrock AgentCore Memory</text>
+<text x="1345" y="262" class="s" text-anchor="middle">（Semantic / Preference / Summary）</text>
+<text x="1345" y="288" class="xs" text-anchor="middle">长期记忆策略</text>
+<rect x="1160" y="400" width="370" height="130" rx="10" fill="#ffffff" stroke="#60a5fa" stroke-width="1.5" filter="url(#sh)"/>
+<text x="1345" y="438" class="t" text-anchor="middle" style="fill:#1e40af">Amazon Bedrock</text>
+<text x="1345" y="468" class="s" text-anchor="middle">Claude Haiku 5.5 / Sonnet 5.5</text>
+<text x="1345" y="494" class="s" text-anchor="middle">Titan Embeddings V2</text>
+<path d="M 370,300 L 618,300" fill="none" stroke="#ea580c" stroke-width="2" marker-end="url(#mo)"/>
+<path d="M 300,230 L 300,172 L 1045,172 L 1045,250 L 1158,250" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#mb)"/>
+<path d="M 910,460 L 1158,460" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#mb)"/>
+<path d="M 220,470 L 220,596 L 1345,596 L 1345,532" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#mb)"/>
+<rect x="410.5" y="276" width="167" height="19" rx="4" fill="#ffffff" opacity="0.95"/>
+<text x="494" y="290" class="lb" text-anchor="middle" style="fill:#ea580c">HTTP v3 API · VPC 私网</text>
+<rect x="391.0" y="306" width="206" height="19" rx="4" fill="#ffffff" opacity="0.95"/>
+<text x="494" y="320" class="lb" text-anchor="middle" style="fill:#374151">SG：仅 runner SG 可访问 8420</text>
+<rect x="548.0" y="151" width="264" height="19" rx="4" fill="#ffffff" opacity="0.95"/>
+<text x="680" y="165" class="lb" text-anchor="middle" style="fill:#2563eb">CreateEvent / RetrieveMemoryRecords</text>
+<rect x="941.5" y="424" width="185" height="19" rx="4" fill="#ffffff" opacity="0.95"/>
+<text x="1034" y="438" class="lb" text-anchor="middle" style="fill:#2563eb">TDAM 内部抽取与 embedding</text>
+<rect x="956.0" y="468" width="156" height="19" rx="4" fill="#ffffff" opacity="0.95"/>
+<text x="1034" y="482" class="lb" text-anchor="middle" style="fill:#2563eb">Haiku 5.5 + Titan V2</text>
+<rect x="660.5" y="575" width="239" height="19" rx="4" fill="#ffffff" opacity="0.95"/>
+<text x="780" y="589" class="lb" text-anchor="middle" style="fill:#2563eb">回答：Haiku 5.5；评分：Sonnet 5.5</text>
+<text x="40" y="660" class="h" text-anchor="start">B  评测流程</text>
+<path d="M 260,770.0 L 298,770.0" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#mg)"/>
+<rect x="40" y="690" width="220" height="160" rx="10" fill="#ffffff" stroke="#9ca3af" stroke-width="1.5" filter="url(#sh)"/>
+<rect x="40" y="690" width="220" height="6" rx="3" fill="#6b7280"/>
+<text x="150.0" y="726" class="t" text-anchor="middle">① 准备数据集</text>
+<text x="150.0" y="782.0" class="s" text-anchor="middle">web3_zh 120 题</text>
+<text x="150.0" y="804.0" class="s" text-anchor="middle">LongMemEval-S 7 题</text>
+<path d="M 520,770.0 L 558,770.0" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#mg)"/>
+<rect x="300" y="690" width="220" height="160" rx="10" fill="#ffffff" stroke="#9ca3af" stroke-width="1.5" filter="url(#sh)"/>
+<rect x="300" y="690" width="220" height="6" rx="3" fill="#6b7280"/>
+<text x="410.0" y="726" class="t" text-anchor="middle">② 写入</text>
+<text x="410.0" y="782.0" class="s" text-anchor="middle">按时间顺序</text>
+<text x="410.0" y="804.0" class="s" text-anchor="middle">每个用户独立 actor / team</text>
+<path d="M 780,770.0 L 818,770.0" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#mg)"/>
+<rect x="560" y="690" width="220" height="160" rx="10" fill="#ffffff" stroke="#9ca3af" stroke-width="1.5" filter="url(#sh)"/>
+<rect x="560" y="690" width="220" height="6" rx="3" fill="#6b7280"/>
+<text x="670.0" y="726" class="t" text-anchor="middle">③ 等待异步抽取就绪</text>
+<text x="670.0" y="782.0" class="s" text-anchor="middle">TDAM ≥900s + 队列空闲</text>
+<text x="670.0" y="804.0" class="s" text-anchor="middle">AgentCore ≥300s + 无失败任务</text>
+<path d="M 1040,770.0 L 1078,770.0" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#mg)"/>
+<rect x="820" y="690" width="220" height="160" rx="10" fill="#ffffff" stroke="#9ca3af" stroke-width="1.5" filter="url(#sh)"/>
+<rect x="820" y="690" width="220" height="6" rx="3" fill="#6b7280"/>
+<text x="930.0" y="726" class="t" text-anchor="middle">④ 检索</text>
+<text x="930.0" y="782.0" class="s" text-anchor="middle">检索 → 截断到</text>
+<text x="930.0" y="804.0" class="s" text-anchor="middle">4K tokens 上下文</text>
+<path d="M 1300,770.0 L 1338,770.0" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#mg)"/>
+<rect x="1080" y="690" width="220" height="160" rx="10" fill="#ffffff" stroke="#9ca3af" stroke-width="1.5" filter="url(#sh)"/>
+<rect x="1080" y="690" width="220" height="6" rx="3" fill="#6b7280"/>
+<text x="1190.0" y="726" class="t" text-anchor="middle">⑤ 回答 → 评分</text>
+<text x="1190.0" y="760.0" class="s" text-anchor="middle">回答（Haiku 5.5）</text>
+<text x="1190.0" y="782.0" class="s" text-anchor="middle">→ 评分（Sonnet 5.5，</text>
+<text x="1190.0" y="804.0" class="s" text-anchor="middle">LongMemEval 模板）</text>
+<text x="1190.0" y="826.0" class="s" text-anchor="middle">+ 事实覆盖判定</text>
+<rect x="1340" y="690" width="220" height="160" rx="10" fill="#ffffff" stroke="#9ca3af" stroke-width="1.5" filter="url(#sh)"/>
+<rect x="1340" y="690" width="220" height="6" rx="3" fill="#6b7280"/>
+<text x="1450.0" y="726" class="t" text-anchor="middle">⑥ 报告</text>
+<text x="1450.0" y="782.0" class="s" text-anchor="middle">正确率 / CI</text>
+<text x="1450.0" y="804.0" class="s" text-anchor="middle">McNemar / 覆盖率</text>
+<path d="M 670,850 L 670,908" fill="none" stroke="#6b7280" stroke-width="1.6" stroke-dasharray="5,3" marker-end="url(#mg)"/>
+<path d="M 930,850 L 930,908" fill="none" stroke="#6b7280" stroke-width="1.6" stroke-dasharray="5,3" marker-end="url(#mg)"/>
+<rect x="768.0" y="870" width="64" height="19" rx="4" fill="#ffffff" opacity="0.95"/>
+<text x="800" y="884" class="lb" text-anchor="middle" style="fill:#6b7280">旁路探针</text>
+<rect x="560" y="910" width="480" height="104" rx="10" fill="#f9fafb" stroke="#9ca3af" stroke-width="1.5" stroke-dasharray="5,3"/>
+<text x="800" y="940" class="t" text-anchor="middle">探针</text>
+<text x="800" y="966" class="s" text-anchor="middle">写入→可检索时延 · 检索压测（并发 1/8/32）</text>
+<text x="800" y="992" class="s" text-anchor="middle">跨租户隔离 / 身份伪造 · 密钥泄漏 · 删除 · 容器重启</text>
+<rect x="1120" y="900" width="420" height="130" rx="8" fill="#ffffff" stroke="#e5e7eb" stroke-width="1.5"/>
+<text x="1136" y="924" class="t" text-anchor="start">图例</text>
+<rect x="1136" y="938" width="22" height="16" rx="3" fill="#eff6ff" stroke="#60a5fa" stroke-width="1.5"/>
+<text x="1168" y="951" class="xs" text-anchor="start">AWS 托管服务（AgentCore Memory / Bedrock）</text>
+<rect x="1136" y="964" width="22" height="16" rx="3" fill="#fff7ed" stroke="#fb923c" stroke-width="1.5"/>
+<text x="1168" y="977" class="xs" text-anchor="start">自建 TDAM（TencentDB Agent Memory）</text>
+<rect x="1136" y="990" width="22" height="16" rx="3" fill="#f3f4f6" stroke="#9ca3af" stroke-width="1.5"/>
+<text x="1168" y="1003" class="xs" text-anchor="start">评测 harness / 中立</text>
+<line x1="1136" y1="1020" x2="1170" y2="1020" stroke="#6b7280" stroke-width="1.6" stroke-dasharray="5,3" marker-end="url(#mg)"/>
+<text x="1180" y="1024" class="xs" text-anchor="start">虚线：旁路探针；实线：调用 / 流程</text>
+</svg>

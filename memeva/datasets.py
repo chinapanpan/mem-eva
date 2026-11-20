@@ -74,8 +74,21 @@ def load_web3(cfg: dict) -> dict:
     return data
 
 
+def load_custom(name: str, cfg: dict) -> dict:
+    """Any other dataset: data/<name>/dataset.json (or config datasets.<name>), already in the schema above."""
+    path = cfg.get("datasets", {}).get(name) or f"data/{name}/dataset.json"
+    data = read_json(ROOT / path)
+    data["name"] = name
+    return data
+
+
 def load(name: str, cfg: dict, limit: int | None = None) -> dict:
-    data = {"lme": load_lme, "web3_zh": load_web3}[name](cfg)
+    if name == "lme":
+        data = load_lme(cfg)
+    elif name == "web3_zh":
+        data = load_web3(cfg)
+    else:
+        data = load_custom(name, cfg)
     if limit:
         data["users"] = data["users"][:limit]
     return data

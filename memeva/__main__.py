@@ -25,7 +25,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(prog="memeva")
     ap.add_argument("cmd")
     ap.add_argument("--run", default="r1")
-    ap.add_argument("--dataset", default="web3_zh", choices=["web3_zh", "lme"])
+    ap.add_argument("--dataset", default="web3_zh", help="web3_zh | lme | <name> for data/<name>/dataset.json")
     ap.add_argument("--config")
     ap.add_argument("--stores", default="tdam,agentcore")
     ap.add_argument("--arms")
