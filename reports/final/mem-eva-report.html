@@ -23,6 +23,7 @@ details summary{cursor:pointer;color:var(--ink2);font-size:13px;margin-top:8px}a
 </style></head><body><div class="viz-root"><div class="wrap">
 <h1>Agent 记忆系统评测：TencentDB Agent Memory vs Amazon Bedrock AgentCore Memory</h1>
 <p class="sub">mem-eva · us-east-1 · 2026-11-19 · 自建 web3_zh 数据集 120 题 + LongMemEval-S 7 题 · 回答模型 Haiku 5.5 · 评分模型 Sonnet 5.5 · 上下文 4K · <a href="https://github.com/chinapanpan/mem-eva">GitHub</a></p>
+<div class="card" style="border-color:#c62828;background:rgba(198,40,40,.06)"><b style="color:var(--bad)">⚠️ 结果修订中（2026-11-20）</b><p style="margin:6px 0 0">补充测试发现：主评测向 TDAM 写入历史对话时逐轮背靠背写入（间隔约 0.3 秒），触发了 TDAM 抽取调度的时序问题，部分轮次没有被抽取，<b>TDAM 的分数被明显低估</b>。同样 24 道题上改为每轮间隔 20 秒写入后，TDAM 从 13/24 提高到 21/24，与 AgentCore 的 21/24 持平。正在按真实节奏重跑，本页 TDAM 相关数字和“AgentCore 领先”的结论暂不成立，以重跑结果为准。</p></div>
 <div class="tiles" id="tiles"></div>
 
 <h2>记忆问答正确率（web3_zh，120 题，误差线为 95% Wilson CI）</h2>
