@@ -1,0 +1,517 @@
+{
+  "run": "iso2",
+  "memory": "<memory-id>",
+  "actors": {
+    "attacker": "iso2-alice",
+    "victim": "iso2-bob",
+    "prefix_actor": "iso2-alice2",
+    "slash_actor": "iso2-alice/x"
+  },
+  "tokens": {
+    "iso2-alice": "ALICE-7Q2Z",
+    "iso2-bob": "BOB-K9X4",
+    "iso2-alice2": "ALICE2-M3P8",
+    "iso2-alice/x": "ALICEX-W5N1"
+  },
+  "policy": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "OwnEventsOnly",
+        "Effect": "Allow",
+        "Action": [
+          "bedrock-agentcore:CreateEvent",
+          "bedrock-agentcore:GetEvent",
+          "bedrock-agentcore:ListEvents",
+          "bedrock-agentcore:DeleteEvent",
+          "bedrock-agentcore:ListSessions"
+        ],
+        "Resource": "arn:aws:bedrock-agentcore:<region>:<account-id>:memory/<memory-id>",
+        "Condition": {
+          "StringEquals": {
+            "bedrock-agentcore:actorId": "${aws:PrincipalTag/actorId}"
+          }
+        }
+      },
+      {
+        "Sid": "OwnRecordsByExactNamespace",
+        "Effect": "Allow",
+        "Action": [
+          "bedrock-agentcore:RetrieveMemoryRecords",
+          "bedrock-agentcore:ListMemoryRecords",
+          "bedrock-agentcore:GetMemoryRecord",
+          "bedrock-agentcore:DeleteMemoryRecord",
+          "bedrock-agentcore:BatchDeleteMemoryRecords"
+        ],
+        "Resource": "arn:aws:bedrock-agentcore:<region>:<account-id>:memory/<memory-id>",
+        "Condition": {
+          "StringLike": {
+            "bedrock-agentcore:namespace": "/u/${aws:PrincipalTag/actorId}/*"
+          },
+          "Null": {
+            "bedrock-agentcore:namespacePath": "true"
+          }
+        }
+      },
+      {
+        "Sid": "OwnRecordsByNamespacePath",
+        "Effect": "Allow",
+        "Action": [
+          "bedrock-agentcore:RetrieveMemoryRecords",
+          "bedrock-agentcore:ListMemoryRecords"
+        ],
+        "Resource": "arn:aws:bedrock-agentcore:<region>:<account-id>:memory/<memory-id>",
+        "Condition": {
+          "StringLike": {
+            "bedrock-agentcore:namespacePath": "/u/${aws:PrincipalTag/actorId}/*"
+          },
+          "Null": {
+            "bedrock-agentcore:namespace": "true"
+          }
+        }
+      },
+      {
+        "Sid": "DenyOtherActorEvents",
+        "Effect": "Deny",
+        "Action": [
+          "bedrock-agentcore:CreateEvent",
+          "bedrock-agentcore:GetEvent",
+          "bedrock-agentcore:ListEvents",
+          "bedrock-agentcore:DeleteEvent",
+          "bedrock-agentcore:ListSessions"
+        ],
+        "Resource": "arn:aws:bedrock-agentcore:<region>:<account-id>:memory/<memory-id>",
+        "Condition": {
+          "StringNotEquals": {
+            "bedrock-agentcore:actorId": "${aws:PrincipalTag/actorId}"
+          },
+          "Null": {
+            "bedrock-agentcore:actorId": "false"
+          }
+        }
+      },
+      {
+        "Sid": "DenyOtherNamespace",
+        "Effect": "Deny",
+        "Action": "bedrock-agentcore:*",
+        "Resource": "arn:aws:bedrock-agentcore:<region>:<account-id>:memory/<memory-id>",
+        "Condition": {
+          "StringNotLike": {
+            "bedrock-agentcore:namespace": "/u/${aws:PrincipalTag/actorId}/*"
+          },
+          "Null": {
+            "bedrock-agentcore:namespace": "false"
+          }
+        }
+      },
+      {
+        "Sid": "DenyOtherNamespacePath",
+        "Effect": "Deny",
+        "Action": "bedrock-agentcore:*",
+        "Resource": "arn:aws:bedrock-agentcore:<region>:<account-id>:memory/<memory-id>",
+        "Condition": {
+          "StringNotLike": {
+            "bedrock-agentcore:namespacePath": "/u/${aws:PrincipalTag/actorId}/*"
+          },
+          "Null": {
+            "bedrock-agentcore:namespacePath": "false"
+          }
+        }
+      },
+      {
+        "Sid": "DenyNoActorScopeAndAdmin",
+        "Effect": "Deny",
+        "Action": [
+          "bedrock-agentcore:ListActors",
+          "bedrock-agentcore:ListMemoryExtractionJobs",
+          "bedrock-agentcore:StartMemoryExtractionJob",
+          "bedrock-agentcore:BatchCreateMemoryRecords",
+          "bedrock-agentcore:BatchUpdateMemoryRecords",
+          "bedrock-agentcore:UpdateMemory",
+          "bedrock-agentcore:DeleteMemory",
+          "bedrock-agentcore:CreateMemory"
+        ],
+        "Resource": "*"
+      }
+    ]
+  },
+  "trust_condition": {
+    "Null": {
+      "aws:RequestTag/actorId": "false"
+    }
+  },
+  "cases": [
+    {
+      "group": "自己的数据",
+      "case": "精确 namespace 检索自己的语义记忆 /u/alice/semantic/",
+      "expected": "allowed",
+      "outcome": "allowed",
+      "detail": {
+        "records": 2,
+        "tokens_seen": [
+          "ALICE-7Q2Z"
+        ]
+      },
+      "leaked_other_users_data": false,
+      "pass": true
+    },
+    {
+      "group": "自己的数据",
+      "case": "分层检索自己的全部记忆 namespacePath=/u/alice/",
+      "expected": "allowed",
+      "outcome": "allowed",
+      "detail": {
+        "records": 10,
+        "tokens_seen": [
+          "ALICE-7Q2Z",
+          "ALICEX-W5N1"
+        ]
+      },
+      "leaked_other_users_data": true,
+      "pass": false
+    },
+    {
+      "group": "自己的数据",
+      "case": "列出自己的记忆记录 namespacePath=/u/alice/",
+      "expected": "allowed",
+      "outcome": "allowed",
+      "detail": {
+        "records": 12,
+        "tokens_seen": [
+          "ALICE-7Q2Z",
+          "ALICEX-W5N1"
+        ]
+      },
+      "leaked_other_users_data": true,
+      "pass": false
+    },
+    {
+      "group": "自己的数据",
+      "case": "精确 namespace 检索自己的会话摘要",
+      "expected": "allowed",
+      "outcome": "allowed",
+      "detail": {
+        "records": 2,
+        "tokens_seen": [
+          "ALICEX-W5N1"
+        ]
+      },
+      "leaked_other_users_data": true,
+      "pass": false
+    },
+    {
+      "group": "自己的数据",
+      "case": "以自己的 actorId 写入事件",
+      "expected": "allowed",
+      "outcome": "allowed",
+      "detail": {
+        "eventId": "0000001795161508143#fb8b4090"
+      },
+      "leaked_other_users_data": false,
+      "pass": true
+    },
+    {
+      "group": "自己的数据",
+      "case": "列出自己的会话",
+      "expected": "allowed",
+      "outcome": "allowed",
+      "detail": {
+        "sessions": 2
+      },
+      "leaked_other_users_data": false,
+      "pass": true
+    },
+    {
+      "group": "读别人的长期记忆",
+      "case": "精确 namespace 检索 Bob 的记忆 /u/bob/semantic/",
+      "expected": "denied",
+      "outcome": "denied",
+      "code": "AccessDeniedException",
+      "detail": "User: arn:aws:sts::<account-id>:assumed-role/memeva-actor-scoped/alice-session is not authorized to perform: bedrock-agentcore:RetrieveMemoryRecords on resource: arn:aws:bedrock-ag",
+      "leaked_other_users_data": false,
+      "pass": true
+    },
+    {
+      "group": "读别人的长期记忆",
+      "case": "分层检索 Bob 的全部记忆 namespacePath=/u/bob/",
+      "expected": "denied",
+      "outcome": "denied",
+      "code": "AccessDeniedException",
+      "detail": "User: arn:aws:sts::<account-id>:assumed-role/memeva-actor-scoped/alice-session is not authorized to perform: bedrock-agentcore:RetrieveMemoryRecords on resource: arn:aws:bedrock-ag",
+      "leaked_other_users_data": false,
+      "pass": true
+    },
+    {
+      "group": "读别人的长期记忆",
+      "case": "列出 Bob 的记忆记录",
+      "expected": "denied",
+      "outcome": "denied",
+      "code": "AccessDeniedException",
+      "detail": "User: arn:aws:sts::<account-id>:assumed-role/memeva-actor-scoped/alice-session is not authorized to perform: bedrock-agentcore:ListMemoryRecords on resource: arn:aws:bedrock-agentc",
+      "leaked_other_users_data": false,
+      "pass": true
+    },
+    {
+      "group": "读别人的长期记忆",
+      "case": "分层检索所有用户 namespacePath=/u/",
+      "expected": "denied",
+      "outcome": "denied",
+      "code": "AccessDeniedException",
+      "detail": "User: arn:aws:sts::<account-id>:assumed-role/memeva-actor-scoped/alice-session is not authorized to perform: bedrock-agentcore:RetrieveMemoryRecords on resource: arn:aws:bedrock-ag",
+      "leaked_other_users_data": false,
+      "pass": true
+    },
+    {
+      "group": "读别人的长期记忆",
+      "case": "分层检索根路径 namespacePath=/",
+      "expected": "denied",
+      "outcome": "denied",
+      "code": "AccessDeniedException",
+      "detail": "User: arn:aws:sts::<account-id>:assumed-role/memeva-actor-scoped/alice-session is not authorized to perform: bedrock-agentcore:RetrieveMemoryRecords on resource: arn:aws:bedrock-ag",
+      "leaked_other_users_data": false,
+      "pass": true
+    },
+    {
+      "group": "读别人的长期记忆",
+      "case": "同时传 namespace=/u/bob/semantic/ 与 namespacePath=/u/alice/（混淆参数）",
+      "expected": "denied/error",
+      "outcome": "denied",
+      "code": "AccessDeniedException",
+      "detail": "User: arn:aws:sts::<account-id>:assumed-role/memeva-actor-scoped/alice-session is not authorized to perform: bedrock-agentcore:RetrieveMemoryRecords on resource: arn:aws:bedrock-ag",
+      "leaked_other_users_data": false,
+      "pass": true
+    },
+    {
+      "group": "读别人的长期记忆",
+      "case": "路径穿越 namespacePath=/u/alice/../bob/",
+      "expected": "denied/error",
+      "outcome": "error",
+      "code": "ValidationException",
+      "detail": "1 validation error detected: Value at 'namespacePath' failed to satisfy constraint: Member must satisfy regular expression pattern: [a-zA-Z0-9/*][a-zA-Z0-9-_/*]*(?::[a-zA-Z0-9-_/*]",
+      "leaked_other_users_data": false,
+      "pass": true
+    },
+    {
+      "group": "读别人的长期记忆",
+      "case": "前缀混淆：读 actorId 为 alice2 的记忆（alice 是它的前缀）",
+      "expected": "denied",
+      "outcome": "denied",
+      "code": "AccessDeniedException",
+      "detail": "User: arn:aws:sts::<account-id>:assumed-role/memeva-actor-scoped/alice-session is not authorized to perform: bedrock-agentcore:RetrieveMemoryRecords on resource: arn:aws:bedrock-ag",
+      "leaked_other_users_data": false,
+      "pass": true
+    },
+    {
+      "group": "按记录 ID 直接访问",
+      "case": "GetMemoryRecord 读 Bob 的记录，不传 namespace",
+      "expected": "denied",
+      "outcome": "denied",
+      "code": "AccessDeniedException",
+      "detail": "User: arn:aws:sts::<account-id>:assumed-role/memeva-actor-scoped/alice-session is not authorized to perform: bedrock-agentcore:GetMemoryRecord on resource: arn:aws:bedrock-agentcor",
+      "leaked_other_users_data": false,
+      "pass": true
+    },
+    {
+      "group": "按记录 ID 直接访问",
+      "case": "GetMemoryRecord 读 Bob 的记录，谎报 namespace=/u/alice/semantic/",
+      "expected": "denied/error",
+      "outcome": "error",
+      "code": "ResourceNotFoundException",
+      "detail": "The memory record was not found",
+      "leaked_other_users_data": false,
+      "pass": true
+    },
+    {
+      "group": "按记录 ID 直接访问",
+      "case": "GetMemoryRecord 读 Bob 的记录，如实传 Bob 的 namespace",
+      "expected": "denied",
+      "outcome": "denied",
+      "code": "AccessDeniedException",
+      "detail": "User: arn:aws:sts::<account-id>:assumed-role/memeva-actor-scoped/alice-session is not authorized to perform: bedrock-agentcore:GetMemoryRecord on resource: arn:aws:bedrock-agentcor",
+      "leaked_other_users_data": false,
+      "pass": true
+    },
+    {
+      "group": "改/删别人的数据",
+      "case": "DeleteMemoryRecord 删 Bob 的记录，谎报 namespace=/u/alice/semantic/",
+      "expected": "denied/error",
+      "outcome": "error",
+      "code": "ResourceNotFoundException",
+      "detail": "The memory record was not found",
+      "leaked_other_users_data": false,
+      "pass": true
+    },
+    {
+      "group": "改/删别人的数据",
+      "case": "BatchDeleteMemoryRecords 删 Bob 的记录，谎报 namespace",
+      "expected": "denied/error/rejected",
+      "outcome": "rejected",
+      "code": "PerRecordRejected",
+      "detail": "[{\"code\": 404, \"msg\": \"Memory record not found\"}]",
+      "leaked_other_users_data": false,
+      "pass": true
+    },
+    {
+      "group": "改/删别人的数据",
+      "case": "以 Bob 的 actorId 写入事件（冒充 Bob 写记忆）",
+      "expected": "denied",
+      "outcome": "denied",
+      "code": "AccessDeniedException",
+      "detail": "User: arn:aws:sts::<account-id>:assumed-role/memeva-actor-scoped/alice-session is not authorized to perform: bedrock-agentcore:CreateEvent on resource: arn:aws:bedrock-agentcore:us",
+      "leaked_other_users_data": false,
+      "pass": true
+    },
+    {
+      "group": "读别人的原始对话",
+      "case": "列出 Bob 的会话 ListSessions",
+      "expected": "denied",
+      "outcome": "denied",
+      "code": "AccessDeniedException",
+      "detail": "User: arn:aws:sts::<account-id>:assumed-role/memeva-actor-scoped/alice-session is not authorized to perform: bedrock-agentcore:ListSessions on resource: arn:aws:bedrock-agentcore:u",
+      "leaked_other_users_data": false,
+      "pass": true
+    },
+    {
+      "group": "读别人的原始对话",
+      "case": "列出 Bob 的事件 ListEvents",
+      "expected": "denied",
+      "outcome": "denied",
+      "code": "AccessDeniedException",
+      "detail": "User: arn:aws:sts::<account-id>:assumed-role/memeva-actor-scoped/alice-session is not authorized to perform: bedrock-agentcore:ListEvents on resource: arn:aws:bedrock-agentcore:us-",
+      "leaked_other_users_data": false,
+      "pass": true
+    },
+    {
+      "group": "读别人的原始对话",
+      "case": "按事件 ID 读 Bob 的事件 GetEvent",
+      "expected": "denied",
+      "outcome": "denied",
+      "code": "AccessDeniedException",
+      "detail": "User: arn:aws:sts::<account-id>:assumed-role/memeva-actor-scoped/alice-session is not authorized to perform: bedrock-agentcore:GetEvent on resource: arn:aws:bedrock-agentcore:us-ea",
+      "leaked_other_users_data": false,
+      "pass": true
+    },
+    {
+      "group": "枚举与提权",
+      "case": "ListActors 枚举所有 actorId",
+      "expected": "denied",
+      "outcome": "denied",
+      "code": "AccessDeniedException",
+      "detail": "User: arn:aws:sts::<account-id>:assumed-role/memeva-actor-scoped/alice-session is not authorized to perform: bedrock-agentcore:ListActors on resource: arn:aws:bedrock-agentcore:us-",
+      "leaked_other_users_data": false,
+      "pass": true
+    },
+    {
+      "group": "枚举与提权",
+      "case": "ListMemoryExtractionJobs 查看 Bob 的抽取任务",
+      "expected": "denied",
+      "outcome": "denied",
+      "code": "AccessDeniedException",
+      "detail": "User: arn:aws:sts::<account-id>:assumed-role/memeva-actor-scoped/alice-session is not authorized to perform: bedrock-agentcore:ListMemoryExtractionJobs on resource: arn:aws:bedrock",
+      "leaked_other_users_data": false,
+      "pass": true
+    },
+    {
+      "group": "自己的数据",
+      "case": "GetMemoryRecord 读自己的记录，如实传自己的 namespace",
+      "expected": "allowed",
+      "outcome": "allowed",
+      "detail": {
+        "tokens_seen": [
+          "ALICE-7Q2Z"
+        ]
+      },
+      "leaked_other_users_data": false,
+      "pass": true
+    },
+    {
+      "group": "自己的数据",
+      "case": "GetMemoryRecord 读自己的记录，不传 namespace（看条件键是否由服务端回填）",
+      "expected": "allowed/denied",
+      "outcome": "denied",
+      "code": "AccessDeniedException",
+      "detail": "User: arn:aws:sts::<account-id>:assumed-role/memeva-actor-scoped/alice-session is not authorized to perform: bedrock-agentcore:GetMemoryRecord on resource: arn:aws:bedrock-agentcor",
+      "leaked_other_users_data": false,
+      "pass": true
+    },
+    {
+      "group": "读别人的长期记忆",
+      "case": "namespacePath=/u/alice（缺少结尾斜杠）",
+      "expected": "denied/error",
+      "outcome": "denied",
+      "code": "AccessDeniedException",
+      "detail": "User: arn:aws:sts::<account-id>:assumed-role/memeva-actor-scoped/alice-session is not authorized to perform: bedrock-agentcore:RetrieveMemoryRecords on resource: arn:aws:bedrock-ag",
+      "leaked_other_users_data": false,
+      "pass": true
+    },
+    {
+      "group": "读别人的长期记忆",
+      "case": "namespacePath=/u/*/（字面星号）",
+      "expected": "denied/error",
+      "outcome": "denied",
+      "code": "AccessDeniedException",
+      "detail": "User: arn:aws:sts::<account-id>:assumed-role/memeva-actor-scoped/alice-session is not authorized to perform: bedrock-agentcore:RetrieveMemoryRecords on resource: arn:aws:bedrock-ag",
+      "leaked_other_users_data": false,
+      "pass": true
+    },
+    {
+      "group": "改/删别人的数据",
+      "case": "BatchCreateMemoryRecords 往 Bob 的 namespace 写记录",
+      "expected": "denied/error/rejected",
+      "outcome": "denied",
+      "code": "AccessDeniedException",
+      "detail": "User: arn:aws:sts::<account-id>:assumed-role/memeva-actor-scoped/alice-session is not authorized to perform: bedrock-agentcore:BatchCreateMemoryRecords on resource: arn:aws:bedrock",
+      "leaked_other_users_data": false,
+      "pass": true
+    },
+    {
+      "group": "枚举与提权",
+      "case": "StartMemoryExtractionJob 触发抽取任务",
+      "expected": "denied/error",
+      "outcome": "denied",
+      "code": "AccessDeniedException",
+      "detail": "User: arn:aws:sts::<account-id>:assumed-role/memeva-actor-scoped/alice-session is not authorized to perform: bedrock-agentcore:StartMemoryExtractionJob on resource: arn:aws:bedrock",
+      "leaked_other_users_data": false,
+      "pass": true
+    },
+    {
+      "group": "枚举与提权",
+      "case": "AssumeRole 时不带 actorId 标签（标签缺失）",
+      "expected": "denied",
+      "outcome": "denied",
+      "code": "AccessDenied",
+      "detail": "User: arn:aws:sts::<account-id>:assumed-role/ec2-cc/<instance-id> is not authorized to perform: sts:AssumeRole on resource: arn:aws:iam::<account-id>:role/memeva-actor-scoped",
+      "leaked_other_users_data": false,
+      "pass": true,
+      "note": "STS 返回码为 AccessDenied（原分类器只认 AccessDeniedException），已改判为 denied"
+    },
+    {
+      "group": "风险演示",
+      "case": "actorId 含斜杠：读 actor “alice/x” 的记忆（会被 /u/alice/* 匹配）",
+      "expected": "allowed/denied",
+      "outcome": "allowed",
+      "detail": {
+        "records": 6,
+        "tokens_seen": [
+          "ALICEX-W5N1"
+        ]
+      },
+      "leaked_other_users_data": true,
+      "pass": true
+    },
+    {
+      "group": "枚举与提权",
+      "case": "用 Alice 的凭证重新 AssumeRole，并把标签改成 actorId=bob",
+      "expected": "denied",
+      "outcome": "denied",
+      "code": "AccessDenied",
+      "detail": "User: arn:aws:sts::<account-id>:assumed-role/memeva-actor-scoped/alice-session is not authorized to perform: sts:TagSession on resource: arn:aws:iam::<account-id>:role/memeva-actor",
+      "leaked_other_users_data": false,
+      "pass": true,
+      "note": "STS 返回码为 AccessDenied（原分类器只认 AccessDeniedException），已改判为 denied"
+    }
+  ],
+  "bob_record_intact_after_test": true,
+  "passed": 31,
+  "total": 34
+}

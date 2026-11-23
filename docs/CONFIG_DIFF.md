@@ -17,6 +17,7 @@
 
 ## 写入方式
 每个 user→assistant 轮次调用一次 `POST /v3/conversation/add`，带原始 `timestamp`，这和在线 Agent 的写法一致。
+修订版每轮（一问一答）之间间隔 20 秒（`tdam.turn_gap_seconds: 20`），AgentCore 一侧同样每轮一个 `CreateEvent`、间隔 20 秒（`agentcore.turn_gap_seconds: 20`）。初版背靠背写入（约 0.3 秒一轮）会触发 TDAM 预热抽取的时序问题，导致部分轮次没有被抽取，详见 README 第 6 节。
 单条消息超过 8,000 字符时按 8,000 字符切分（API 上限 8,192）。
 
 ## 已知限制

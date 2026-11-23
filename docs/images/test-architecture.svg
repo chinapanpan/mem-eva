@@ -24,16 +24,19 @@
 <text x="220" y="429" class="s" text-anchor="middle">probes</text>
 <rect x="600" y="190" width="330" height="340" rx="10" fill="#fff7ed" stroke="#fb923c" stroke-width="1.5" filter="url(#sh)"/>
 <text x="765" y="218" class="t" text-anchor="middle" style="fill:#9a3412">TDAM EC2（m7i.xlarge）</text>
-<rect x="620" y="236" width="290" height="128" rx="8" fill="#ffffff" stroke="#fdba74" stroke-width="1.5"/>
-<text x="765" y="256" class="xs" text-anchor="middle">Docker 容器</text>
-<text x="765" y="282" class="t" text-anchor="middle">TencentDB Agent Memory</text>
-<text x="765" y="306" class="s" text-anchor="middle">memory-core</text>
-<text x="765" y="332" class="s" text-anchor="middle">（SQLite + BM25 + 向量）</text>
-<text x="765" y="352" class="xs" text-anchor="middle">:8420</text>
-<rect x="620" y="400" width="290" height="100" rx="8" fill="#ffffff" stroke="#fdba74" stroke-width="1.5"/>
-<text x="765" y="422" class="xs" text-anchor="middle">进程</text>
-<text x="765" y="450" class="t" text-anchor="middle">LiteLLM 网关</text>
-<text x="765" y="476" class="s" text-anchor="middle">（OpenAI 兼容）</text>
+<rect x="620" y="232" width="290" height="90" rx="8" fill="#ffffff" stroke="#fdba74" stroke-width="1.5"/>
+<text x="765" y="250" class="xs" text-anchor="middle">Docker 容器 · :8420</text>
+<text x="765" y="274" class="t" text-anchor="middle" style="font-size:12.5px">TencentDB Agent Memory · 每用户一个 team</text>
+<text x="765" y="298" class="s" text-anchor="middle">memory-core（SQLite + BM25 + 向量）</text>
+<rect x="620" y="332" width="290" height="90" rx="8" fill="#ffffff" stroke="#fdba74" stroke-width="1.5"/>
+<text x="765" y="350" class="xs" text-anchor="middle">Docker 容器 · :8421</text>
+<text x="765" y="374" class="t" text-anchor="middle" style="font-size:12.5px">TencentDB Agent Memory · 共享 team</text>
+<text x="765" y="398" class="s" text-anchor="middle">memory-core（SQLite + BM25 + 向量）</text>
+<path d="M 616,238 L 612,238 L 612,416 L 616,416" fill="none" stroke="#ea580c" stroke-width="1.6"/>
+<rect x="620" y="436" width="290" height="82" rx="8" fill="#ffffff" stroke="#fdba74" stroke-width="1.5"/>
+<text x="765" y="455" class="xs" text-anchor="middle">进程</text>
+<text x="765" y="480" class="t" text-anchor="middle">LiteLLM 网关</text>
+<text x="765" y="504" class="s" text-anchor="middle">（OpenAI 兼容）</text>
 <rect x="1160" y="190" width="370" height="120" rx="10" fill="#ffffff" stroke="#60a5fa" stroke-width="1.5" filter="url(#sh)"/>
 <text x="1345" y="232" class="t" text-anchor="middle" style="fill:#1e40af">Amazon Bedrock AgentCore Memory</text>
 <text x="1345" y="262" class="s" text-anchor="middle">（Semantic / Preference / Summary）</text>
@@ -42,14 +45,14 @@
 <text x="1345" y="438" class="t" text-anchor="middle" style="fill:#1e40af">Amazon Bedrock</text>
 <text x="1345" y="468" class="s" text-anchor="middle">Claude Haiku 5.5 / Sonnet 5.5</text>
 <text x="1345" y="494" class="s" text-anchor="middle">Titan Embeddings V2</text>
-<path d="M 370,300 L 618,300" fill="none" stroke="#ea580c" stroke-width="2" marker-end="url(#mo)"/>
+<path d="M 370,327 L 610,327" fill="none" stroke="#ea580c" stroke-width="2" marker-end="url(#mo)"/>
 <path d="M 300,230 L 300,172 L 1045,172 L 1045,250 L 1158,250" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#mb)"/>
 <path d="M 910,460 L 1158,460" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#mb)"/>
 <path d="M 220,470 L 220,596 L 1345,596 L 1345,532" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#mb)"/>
-<rect x="410.5" y="276" width="167" height="19" rx="4" fill="#ffffff" opacity="0.95"/>
-<text x="494" y="290" class="lb" text-anchor="middle" style="fill:#ea580c">HTTP v3 API · VPC 私网</text>
-<rect x="391.0" y="306" width="206" height="19" rx="4" fill="#ffffff" opacity="0.95"/>
-<text x="494" y="320" class="lb" text-anchor="middle" style="fill:#374151">SG：仅 runner SG 可访问 8420</text>
+<rect x="406.5" y="303" width="167" height="19" rx="4" fill="#ffffff" opacity="0.95"/>
+<text x="490" y="317" class="lb" text-anchor="middle" style="fill:#ea580c">HTTP v3 API · VPC 私网</text>
+<rect x="366.0" y="333" width="248" height="19" rx="4" fill="#ffffff" opacity="0.95"/>
+<text x="490" y="347" class="lb" text-anchor="middle" style="fill:#374151">SG：仅 runner SG 可访问 8420–8421</text>
 <rect x="548.0" y="151" width="264" height="19" rx="4" fill="#ffffff" opacity="0.95"/>
 <text x="680" y="165" class="lb" text-anchor="middle" style="fill:#2563eb">CreateEvent / RetrieveMemoryRecords</text>
 <rect x="941.5" y="424" width="185" height="19" rx="4" fill="#ffffff" opacity="0.95"/>
@@ -69,13 +72,14 @@
 <rect x="300" y="690" width="220" height="160" rx="10" fill="#ffffff" stroke="#9ca3af" stroke-width="1.5" filter="url(#sh)"/>
 <rect x="300" y="690" width="220" height="6" rx="3" fill="#6b7280"/>
 <text x="410.0" y="726" class="t" text-anchor="middle">② 写入</text>
-<text x="410.0" y="782.0" class="s" text-anchor="middle">按时间顺序</text>
-<text x="410.0" y="804.0" class="s" text-anchor="middle">每个用户独立 actor / team</text>
+<text x="410.0" y="771.0" class="s" text-anchor="middle">按时间顺序，每轮</text>
+<text x="410.0" y="793.0" class="s" text-anchor="middle">（一问一答）间隔 20 秒</text>
+<text x="410.0" y="815.0" class="s" text-anchor="middle">两个系统相同</text>
 <path d="M 780,770.0 L 818,770.0" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#mg)"/>
 <rect x="560" y="690" width="220" height="160" rx="10" fill="#ffffff" stroke="#9ca3af" stroke-width="1.5" filter="url(#sh)"/>
 <rect x="560" y="690" width="220" height="6" rx="3" fill="#6b7280"/>
 <text x="670.0" y="726" class="t" text-anchor="middle">③ 等待异步抽取就绪</text>
-<text x="670.0" y="782.0" class="s" text-anchor="middle">TDAM ≥900s + 队列空闲</text>
+<text x="670.0" y="782.0" class="s" text-anchor="middle">TDAM ≥900s + 队列空闲、计数稳定</text>
 <text x="670.0" y="804.0" class="s" text-anchor="middle">AgentCore ≥300s + 无失败任务</text>
 <path d="M 1040,770.0 L 1078,770.0" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#mg)"/>
 <rect x="820" y="690" width="220" height="160" rx="10" fill="#ffffff" stroke="#9ca3af" stroke-width="1.5" filter="url(#sh)"/>

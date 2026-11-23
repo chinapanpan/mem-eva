@@ -121,16 +121,20 @@ class AgentCoreBackend(Backend):
         for s in user["sessions"]:
             sid = "s" + digest([user["user_id"], s["session_id"]], 24)
             base = datetime.fromisoformat(s["date"].replace("Z", "+00:00"))
-            for ci, chunk in enumerate(_chunks(s["messages"])):
+            gap = float(self.c.get("turn_gap_seconds") or 0)
+            chunks = list(_turns(s["messages"])) if gap else list(_chunks(s["messages"]))
+            for ci, chunk in enumerate(chunks):
                 key = f"{s['session_id']}#{ci}"
                 if key in done:
                     continue
+                if gap and done:
+                    time.sleep(gap)   # realistic pacing: one event per turn, same gap as TDAM
                 self.pacer.wait(sum(ntokens(m["content"]) + 8 for m in chunk) + 500)
                 t0 = time.monotonic()
                 self.dp.create_event(
                     memoryId=self.mid, actorId=uid, sessionId=sid,
                     eventTimestamp=base + timedelta(seconds=ci * 30),
-                    clientToken=digest([uid, key, len(chunk)], 32),
+                    clientToken=digest([uid, key, chunk], 32),  # content-based: idempotent retries, no collisions
                     payload=[{"conversational": {"role": m["role"].upper(), "content": {"text": m["content"][:90000] or "(empty)"}}}
                              for m in chunk],
                 )
@@ -283,6 +287,18 @@ def _chunks(messages: list[dict], max_msgs: int = 20, max_tokens: int = 3000):
             cur, tok = [], 0
         cur.append(m)
         tok += t
+    if cur:
+        yield cur
+
+
+def _turns(messages: list[dict]):
+    """One user→assistant turn per event (used when turn_gap_seconds > 0)."""
+    cur = []
+    for m in messages:
+        cur.append(m)
+        if m["role"] == "assistant":
+            yield cur
+            cur = []
     if cur:
         yield cur
 

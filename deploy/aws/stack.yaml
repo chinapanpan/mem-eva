@@ -22,10 +22,10 @@ Resources:
   TdamSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: mem-eva TDAM memory-core (8420 from runner only)
+      GroupDescription: mem-eva TDAM memory-core (8420-8421 from runner only)
       VpcId: !Ref VpcId
       SecurityGroupIngress:
-        - { IpProtocol: tcp, FromPort: 8420, ToPort: 8420, SourceSecurityGroupId: !Ref RunnerSG }
+        - { IpProtocol: tcp, FromPort: 8420, ToPort: 8421, SourceSecurityGroupId: !Ref RunnerSG }
       SecurityGroupEgress: [{ IpProtocol: "-1", CidrIp: 0.0.0.0/0 }]
 
   Role:

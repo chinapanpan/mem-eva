@@ -105,7 +105,7 @@ class Run:
             blocks = r.preamble + [x.render() for x in r.records]
             context, kept = pack_context(blocks, budget)
             ans = self.llm.chat(self.cfg["answer_model"], answer_prompt(context, q["question"], q["question_date"]),
-                                system=ANSWER_SYSTEM, max_tokens=800, stage="answer", arm=arm, qid=q["qid"])
+                                system=ANSWER_SYSTEM, max_tokens=2000, stage="answer", arm=arm, qid=q["qid"])
             verdict = self.judge(q, ans, arm)
             cov = None
             if coverage and q.get("facts") and arm != "none":

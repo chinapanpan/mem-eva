@@ -67,3 +67,5 @@ runner 和 TDAM 分别部署在两台 EC2 上（`deploy/aws/stack.yaml`）。TDA
 | 正式运行 | TDAM 主机重启后，LiteLLM 密钥失配，抽取全部静默失败：start.sh 改为持久化密钥并做自检，就绪门检测到零记忆时直接报错 |
 | 正式运行 | Judge（Sonnet 5.5）先写推理再给结论，max_tokens=10 被截断判成 no：改为最后一行输出 VERDICT、400 tokens，并对已有回答 rejudge |
 | 正式运行 | AgentCore 检索在并发 ≥8 时触发默认 30 TPS 配额：新增单次分层检索 `agentcore_path` arm |
+| 补充测试 | 连续更新测试发现 TDAM 预热抽取的时序问题：背靠背写入时后续轮次被跳过。24 题对照（只改写入间隔）`tdam_l1` 13/24 → 21/24 |
+| 修订版 `paced` | 两个系统都改为每轮间隔 20 秒写入（AgentCore 每轮一个 `CreateEvent`）；TDAM 两种拓扑各用独立实例；回答上限 800 → 2,000 tokens；初版 TDAM 相关结论与写入→可检索探针作废 |

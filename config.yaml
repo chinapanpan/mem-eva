@@ -19,6 +19,8 @@ tdam:
   team_id: "{user}"                  # "{user}" = one team per end user (private L2/L3). Fixed value = shared-team topology.
   agent_id: assistant
   max_chars_per_message: 8000        # API limit is 8192 chars
+  turn_gap_seconds: 0                # pause between turns while ingesting (0 = back-to-back, as in run `final`)
+  shared_url: null                   # optional separate TDAM instance for the shared-team topology arms
   # readiness: wait at least l1IdleTimeoutSeconds after the last write, then until pipeline idle + counts stable
   min_wait_seconds: 900             # l1IdleTimeout 600s + l2DelayAfterL1 90s + scheduling margin
   max_wait_seconds: 3600
@@ -29,6 +31,7 @@ agentcore:
   memory_name_prefix: memeva
   event_expiry_days: 7
   ingest_tokens_per_minute: 100000   # client-side pacing below the default LTM extraction quota
+  turn_gap_seconds: 0                # >0: one CreateEvent per turn with this gap (same pacing as TDAM)
   min_wait_seconds: 300
   max_wait_seconds: 2400
   stable_polls: 3

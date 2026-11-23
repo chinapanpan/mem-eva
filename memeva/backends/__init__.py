@@ -11,7 +11,8 @@ def make(arm: str, cfg: dict, journal=None) -> Backend:
         # same engine, shared-team topology: every user under one team+agent (L2/L3 shared by design)
         from .tdam import TdamBackend
         sid = cfg["tdam"]["service_id"] + "-shared"
-        c = dict(cfg, tdam=dict(cfg["tdam"], team_id=f"team-{sid}", service_id=sid))  # standalone ignores service_id for L2/L3
+        c = dict(cfg, tdam=dict(cfg["tdam"], team_id=f"team-{sid}", service_id=sid,  # standalone ignores service_id for L2/L3
+                                url=cfg["tdam"].get("shared_url") or cfg["tdam"]["url"]))  # optional separate instance
         be = TdamBackend(c, mode=arm.rsplit("_", 1)[1], journal=journal)
         be.name = arm
         return be

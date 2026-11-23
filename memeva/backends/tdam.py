@@ -95,6 +95,9 @@ class TdamBackend(Backend):
                     text = m["content"] or "(empty)"
                     for k in range(0, len(text), maxc):
                         msgs.append({"role": m["role"], "content": text[k:k + maxc], "timestamp": ts})
+                gap = float(self.c.get("turn_gap_seconds") or 0)
+                if gap and done:
+                    time.sleep(gap)   # optional realistic pacing between turns (default 0 = back-to-back)
                 t0 = time.monotonic()
                 self.post("/v3/conversation/add", {**self._iso(uid), "session_id": sid, "messages": msgs[:100]})
                 done[key] = round(time.monotonic() - t0, 4)

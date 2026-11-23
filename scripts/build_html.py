@@ -7,11 +7,31 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-run = sys.argv[1] if len(sys.argv) > 1 else "final"
+# usage: build_html.py <web3 run> [aux run for LME/perf/failover] [update-chain run for write→retrievable]
+run = sys.argv[1] if len(sys.argv) > 1 else "paced"
+aux = sys.argv[2] if len(sys.argv) > 2 else "final"
+chain_run = sys.argv[3] if len(sys.argv) > 3 else "chain2"
 S = json.loads((ROOT / "reports" / run / "summary.json").read_text())
+A = json.loads((ROOT / "reports" / aux / "summary.json").read_text()) if (ROOT / "reports" / aux / "summary.json").exists() else {"datasets": {}}
 W = S["datasets"]["web3_zh"]
-L = S["datasets"].get("lme", {})
+L = S["datasets"].get("lme") or A["datasets"].get("lme", {})
 P = W.get("probes_full", {})
+PA = A["datasets"].get("web3_zh", {}).get("probes_full", {})
+
+
+def chain_lag(name):
+    f = ROOT / "runs" / name / "update_chain" / "results.json"
+    if not f.exists():
+        return {}
+    steps = json.loads(f.read_text())["steps"]
+    out = {}
+    for k in ("agentcore", "tdam"):
+        xs = [st["systems"][k]["effective_seconds"] for st in steps if k in st["systems"]]
+        ok = sorted(x for x in xs if x is not None)
+        q = lambda f: ok[min(len(ok) - 1, int(f * (len(ok) - 1) + 0.5))] if ok else None  # noqa: E731
+        out[k] = {"ready": len(ok), "n": len(xs), "p50": q(.5), "p95": q(.95), "max": max(ok) if ok else None,
+                  "rows": [{"ready_seconds": x} for x in xs]}
+    return out
 
 ARM_LABEL = {"none": "无记忆", "tdam_full": "TDAM full（每用户一个 team）", "tdam_l1": "TDAM L1（每用户一个 team）",
              "tdam_shared_full": "TDAM full（共享 team）", "tdam_shared_l1": "TDAM L1（共享 team）",
@@ -22,19 +42,19 @@ CATS = [("abstention", "拒答"), ("cross_lingual", "跨语言"), ("fact", "事�
 
 acc = [{"arm": a, "label": ARM_LABEL[a], "family": FAMILY[a], "k": s["correct"], "n": s["n"], "p": s["accuracy"],
         "lo": s["ci95"][0], "hi": s["ci95"][1], "cov": s.get("fact_coverage_4k"), "ctx": s["context_tokens_mean"]}
-       for a, s in W["arms"].items() if a in ARM_LABEL and a != "agentcore_path"]
+       for a, s in W["arms"].items() if a in ARM_LABEL]
 acc.sort(key=lambda r: -r["p"])
 heat = [{"arm": a, "label": ARM_LABEL[a], "cells": [{"cat": c, "name": n, **W["by_category"][a][c]} for c, n in CATS]}
         for a in [r["arm"] for r in acc]]
-perf = P.get("perf", {})
+perf = P.get("perf") or PA.get("perf", {})
 perf_series = [{"arm": a, "label": ARM_LABEL[a], "pts": [{"c": int(c), **v} for c, v in sorted(perf[a].items(), key=lambda x: int(x[0]))]}
                for a in ["agentcore_spu", "tdam_l1", "agentcore_path", "tdam_full", "tdam_shared_l1"] if a in perf]
-lag = P.get("lag", {})
+lag = chain_lag(chain_run) or P.get("lag", {})
 lme = {a: f"{s['correct']}/{s['n']}" for a, s in L.get("arms", {}).items()}
 DATA = {"acc": acc, "heat": heat, "perf": perf_series, "lag": lag, "lme": lme, "pair": W.get("pairwise", {}),
         "secrets": {k: v.get("exact_secret_stored") for k, v in P.get("secrets", {}).items()},
         "iso": {k: [v.get("leaking_probes"), v.get("probes")] for k, v in P.get("isolation", {}).items()},
-        "sharing": P.get("profile_sharing", []), "failover": P.get("failover", {}),
+        "sharing": P.get("profile_sharing", []), "failover": P.get("failover") or PA.get("failover", {}),
         "cost": W.get("cost_estimate", {}),
         "write": {k.split("/")[1]: v.get("write_latency") for k, v in W.get("infra", {}).items()
                   if k.startswith("ingest/") and k.split("/")[1] in ("tdam", "agentcore")}}
@@ -63,29 +83,29 @@ svg text{fill:var(--ink2);font-size:12px;pointer-events:none}.note{color:var(--i
 details summary{cursor:pointer;color:var(--ink2);font-size:13px;margin-top:8px}a{color:var(--s1)}
 </style></head><body><div class="viz-root"><div class="wrap">
 <h1>Agent 记忆系统评测：TencentDB Agent Memory vs Amazon Bedrock AgentCore Memory</h1>
-<p class="sub">mem-eva · us-east-1 · 2026-11-19 · 自建 web3_zh 数据集 120 题 + LongMemEval-S 7 题 · 回答模型 Haiku 5.5 · 评分模型 Sonnet 5.5 · 上下文 4K · <a href="https://github.com/chinapanpan/mem-eva">GitHub</a></p>
-<div class="card" style="border-color:#c62828;background:rgba(198,40,40,.06)"><b style="color:var(--bad)">⚠️ 结果修订中（2026-11-20）</b><p style="margin:6px 0 0">补充测试发现：主评测向 TDAM 写入历史对话时逐轮背靠背写入（间隔约 0.3 秒），触发了 TDAM 抽取调度的时序问题，部分轮次没有被抽取，<b>TDAM 的分数被明显低估</b>。同样 24 道题上改为每轮间隔 20 秒写入后，TDAM 从 13/24 提高到 21/24，与 AgentCore 的 21/24 持平。正在按真实节奏重跑，本页 TDAM 相关数字和“AgentCore 领先”的结论暂不成立，以重跑结果为准。</p></div>
+<p class="sub">mem-eva · us-east-1 · 2026-11-19 初版 / 2026-11-20 修订 · 自建 web3_zh 数据集 120 题 + LongMemEval-S 7 题 · 回答模型 Haiku 5.5 · 评分模型 Sonnet 5.5 · 上下文 4K · <a href="https://github.com/chinapanpan/mem-eva">GitHub</a></p>
+<div class="card" style="border-color:#b26b00;background:rgba(178,107,0,.06)"><b>修订说明（2026-11-20）</b><p style="margin:6px 0 0">本页为修订后的结果。初版评测向 TDAM 写入历史对话时逐轮背靠背写入（间隔约 0.3 秒），触发了 TDAM 抽取调度的时序问题，部分轮次没有被抽取，TDAM 分数被低估（同 24 题对照：13/24 → 21/24）。修订版对两个系统都按每轮间隔 20 秒的真实节奏写入，TDAM 两种拓扑各用独立实例，回答上限从 800 提高到 2,000 tokens。检索压测、故障测试沿用初版（与写入节奏无关）；LongMemEval 7 题沿用初版，TDAM 一侧可能偏低。</p></div>
 <div class="tiles" id="tiles"></div>
 
 <h2>记忆问答正确率（web3_zh，120 题，误差线为 95% Wilson CI）</h2>
 <div class="card"><div class="legend"><span><i class="sw" style="background:var(--s1)"></i>AgentCore</span><span><i class="sw" style="background:var(--s2)"></i>TDAM</span><span><i class="sw" style="background:var(--none)"></i>无记忆基线</span></div>
 <svg id="acc" width="100%" height="270" role="img" aria-label="各方案正确率"></svg>
 <details><summary>数据表</summary><table id="accT"></table></details>
-<p class="note">LongMemEval-S（7 题，仅供参考；TDAM 为每用户一个 team）：AgentCore SPU __LME_AC__，TDAM L1 __LME_T1__，TDAM full __LME_TF__，无记忆 __LME_N__。</p>
-<p class="note">配对 McNemar 检验（AgentCore SPU vs TDAM 最佳 arm `tdam_shared_l1`）：只有 AgentCore 答对 26 题，只有 TDAM 答对 2 题，p &lt; 0.001。</p></div>
+<p class="note">LongMemEval-S（7 题，仅供参考；沿用初版背靠背写入、未按 20 秒节奏重跑，TDAM 一侧可能偏低；TDAM 为每用户一个 team）：AgentCore SPU __LME_AC__，TDAM L1 __LME_T1__，TDAM full __LME_TF__，无记忆 __LME_N__。</p>
+<p class="note">__MCNEMAR__</p></div>
 
 <h2>分类别答对题数</h2>
 <div class="card"><svg id="heat" width="100%" height="250" role="img" aria-label="分类别热力图"></svg>
-<p class="note">颜色越深表示答对越多（每类 17–18 题）。时间题受"下周X"歧义影响：按确定性日期匹配，AgentCore 有 13/17 题给出了标准日期或标准日期 −7 天，TDAM 为 5–7 题。</p></div>
+<p class="note">颜色越深表示答对越多（每类 17–18 题）。时间题受"下周X"歧义影响：按确定性日期匹配，给出标准日期或标准日期 −7 天的题数：__TEMPORAL__。</p></div>
 
 <h2>多租户、安全与删除</h2>
 <div class="card"><table id="sec"></table></div>
 
 <h2>写入→可检索时延</h2>
-<div class="card"><p class="note" style="margin-top:0">口径：从最后一次写入调用返回开始计时，到用"我的邀请码是多少？"检索、结果中第一次出现该邀请码为止。只统计长期记忆（AgentCore 三种策略的记录 / TDAM 的 L1–L3）；原始对话两边写入后都能立即查到，不计入。6 个新用户，每 10 秒查一次（精度约 ±10 秒），最多等 30 分钟。</p>
+<div class="card"><p class="note" style="margin-top:0">口径：来自连续更新测试（同一用户的提币白名单地址连续修改 10 次，每句间隔 20 秒写入）。每轮从最后一次写入调用返回开始计时，到检索结果中第一次出现新地址为止；只统计长期记忆（AgentCore 三种策略的记录 / TDAM 的 L1–L3），原始对话不计入。每 15 秒查一次（精度约 ±15 秒），最多等 20 分钟。完整逐轮结果见 <a href="https://cdn.chrisai.blog/memeva-update-chain.html">连续更新测试页</a>。</p>
 <table id="lagT"></table>
 <p class="note">写入调用本身的耗时（只是写接口返回所需的时间，不代表可检索）：</p><table id="writeT"></table>
-<p class="note">TDAM 的抽取器对这类对话（产品咨询中顺带让它记一个码）返回 <code>empty_scenes</code>，邀请码只停留在原始对话层；在主数据集上 TDAM 能正常抽取。TDAM 默认还要等 600 秒空闲超时才会处理最后几轮。</p></div>
+<p class="note">TDAM 每轮都在 609–618 秒后生效，原因是它要等 600 秒空闲超时才处理最后几轮对话；AgentCore 每轮约 76 秒。</p></div>
 
 <h2>检索性能（只测检索调用本身）</h2>
 <div class="card"><p class="note" style="margin-top:0">口径：数据早已写入并抽取完成，压测只调用检索接口，计时从发出检索请求到收到结果。不包含写入、抽取和回答生成。closed-loop 压测，每个并发档位 45 秒，先预热；runner 和 TDAM 在同一 VPC 内，AgentCore 走同区域 API。</p>
@@ -109,9 +129,9 @@ const NS='http://www.w3.org/2000/svg';function el(t,a,p){const e=document.create
 const ac=D.acc.find(r=>r.arm==='agentcore_spu'),tb=D.acc.filter(r=>r.family==='tdam').sort((a,b)=>b.p-a.p)[0];
 const lagA=D.lag.agentcore||{},lagT=D.lag.tdam||{};
 document.getElementById('tiles').innerHTML=[
-['AgentCore 正确率',pct(ac.p),`${ac.k}/${ac.n} · 4K 事实覆盖 ${pct(ac.cov)}`],
+['AgentCore SPU 正确率',pct(ac.p),`${ac.k}/${ac.n} · 单次分层检索 ${pct((D.acc.find(r=>r.arm==='agentcore_path')||ac).p)}`],
 ['TDAM 最佳 arm 正确率',pct(tb.p),`${tb.k}/${tb.n} · ${tb.label}`],
-['写入完成→可检索 p50（6 个用户）',`${(lagA.p50||0).toFixed(1)} s`,`AgentCore ${lagA.ready}/${lagA.n}（最慢 ${(lagA.max||0).toFixed(0)}s）；TDAM 30 分钟内 ${lagT.ready}/${lagT.n}`],
+['写入完成→可检索（中位）',`${(lagA.p50||0).toFixed(0)} s`,`AgentCore ${lagA.ready}/${lagA.n} 轮；TDAM ${(lagT.p50||0).toFixed(0)} s（${lagT.ready}/${lagT.n} 轮）`],
 ['密钥进入长期记忆',`${D.secrets.agentcore}/30`,`AgentCore（需要脱敏）；TDAM ${D.secrets.tdam}/30`]].map(t=>`<div class="card tile"><div class="k">${t[0]}</div><div class="v">${t[1]}</div><div class="d">${t[2]}</div></div>`).join('');
 // accuracy bars with CI
 (function(){const s=document.getElementById('acc'),w=s.clientWidth||900,lw=230,rw=w-lw-60,bh=22,gap=14,top=10;s.setAttribute('height',top+D.acc.length*(bh+gap)+26);
@@ -133,8 +153,8 @@ g.addEventListener('mousemove',e=>show(e,`<b>${r.label}</b><br>${c.name}：${c.c
 (function(){const B=(ok,t)=>`<span class="badge ${ok===true?'ok':ok===false?'no':'mid'}">${ok===true?'✓':ok===false?'✗':'!'} ${t}</span>`;
 const sh=(D.sharing||[]).find(x=>x.arm==='tdam_shared_full')||{};const rows=[
 ['调用方配置正确时的跨租户泄漏（90 次探测）',B(true,`${D.iso.tdam?.[0]}/90（两种拓扑）`),B(true,`${D.iso.agentcore?.[0]}/90`)],
-['共享 team+agent 时的画像（L2/L3）',B(false,`30 个用户拿到 ${sh.distinct_preambles} 份相同的 persona`),B(true,'按 actor 划分 namespace')],
-['伪造 user_id 越权读取',B(false,'可以（共享 Bearer key，读到了别人的 12 条记录）'),B(true,'IAM namespace 条件拒绝（AccessDenied）')],
+['共享 team+agent 时的画像（L2/L3）',B(false,`30 个用户共用 ${sh.distinct_preambles} 份 persona（由多人对话合成）`),B(true,'按 actor 划分 namespace')],
+['伪造 user_id 越权读取',B(false,'可以（共享 Bearer key，读到了别人的 12 条记录）'),B(true,'配置 IAM ABAC 后 25/25 越权被拒（默认权限可读）')],
 ['假 API secret 写入长期记忆',B(true,`${D.secrets.tdam}/30`),B(false,`${D.secrets.agentcore}/30（需要在写入前脱敏）`)],
 ['删除后残留（0/30/120 秒）',B(true,'即时清零'),B('mid','0 秒仍可检索；30 秒 4/5、120 秒 5/5 清零（最终一致）')],
 ['写入重试是否幂等',B(false,'否（实测出现过重复写入）'),B(true,'是（clientToken）')],
@@ -143,8 +163,8 @@ document.getElementById('sec').innerHTML='<tr><th>测试</th><th style="text-ali
 // lag + write tables
 (function(){const f=v=>(v==null||Number.isNaN(v))?'—':v.toFixed(1)+' s';const rows=[['AgentCore','agentcore'],['TDAM','tdam']].map(([n,k])=>{const g=D.lag[k]||{};const per=(g.rows||[]).map(r=>r.ready_seconds==null?'未就绪':r.ready_seconds.toFixed(0)+'s').join(' · ');
 return `<tr><td>${n}</td><td>${g.ready}/${g.n}</td><td>${f(g.p50)}</td><td>${f(g.p95)}</td><td>${f(g.max)}</td><td style="text-align:left">${per}</td></tr>`}).join('');
-document.getElementById('lagT').innerHTML='<tr><th>系统</th><th>30 分钟内可检索</th><th>p50</th><th>p95</th><th>最慢</th><th style="text-align:left">各用户就绪时间</th></tr>'+rows;
-const w=D.write||{},wr=[['AgentCore CreateEvent（每 ≤20 条消息一次）','agentcore'],['TDAM conversation/add（每轮一次，同步计算 embedding）','tdam']].map(([n,k])=>{const x=w[k]||{};return `<tr><td>${n}</td><td>${x.n||'—'}</td><td>${x.p50==null?'—':x.p50.toFixed(3)+' s'}</td><td>${x.p95==null?'—':x.p95.toFixed(3)+' s'}</td><td>${x.p99==null?'—':x.p99.toFixed(3)+' s'}</td></tr>`}).join('');
+document.getElementById('lagT').innerHTML='<tr><th>系统</th><th>20 分钟内生效</th><th>p50</th><th>p95</th><th>最慢</th><th style="text-align:left">各轮生效时间</th></tr>'+rows;
+const w=D.write||{},wr=[['AgentCore CreateEvent（每轮一次）','agentcore'],['TDAM conversation/add（每轮一次，同步计算 embedding）','tdam']].map(([n,k])=>{const x=w[k]||{};return `<tr><td>${n}</td><td>${x.n||'—'}</td><td>${x.p50==null?'—':x.p50.toFixed(3)+' s'}</td><td>${x.p95==null?'—':x.p95.toFixed(3)+' s'}</td><td>${x.p99==null?'—':x.p99.toFixed(3)+' s'}</td></tr>`}).join('');
 document.getElementById('writeT').innerHTML='<tr><th>写入调用</th><th>调用次数</th><th>p50</th><th>p95</th><th>p99</th></tr>'+wr})();
 // retrieval perf: small multiples p50 / p95 (same log scale, one metric per chart)
 (function(){const cols=['--s1','--s2','--s3','--s4','--s5'];
@@ -166,6 +186,17 @@ document.getElementById('perfT').innerHTML='<tr><th>方案</th><th>并发</th><t
 <tr><td>主机</td><td>无</td><td>$${t.ec2_hourly_usd}/小时 + EBS + 高可用</td></tr>`})();
 </script></body></html>"""
 out = ROOT / "reports" / run / "mem-eva-report.html"
+_tdam_best = max((a for a in W["arms"] if a.startswith("tdam")), key=lambda a: W["arms"][a]["accuracy"])
+_pw = W.get("pairwise", {}).get(f"agentcore_spu_vs_{_tdam_best}", {})
+_mc = (f"配对 McNemar 检验（AgentCore SPU vs TDAM 最佳 arm {ARM_LABEL[_tdam_best]}）：只有 AgentCore 答对 {_pw.get('agentcore_spu_only')} 题，"
+       f"只有 TDAM 答对 {_pw.get(_tdam_best + '_only')} 题，p = {_pw.get('mcnemar_p', float('nan')):.2f}"
+       + ("，差异不显著。" if _pw.get("mcnemar_p", 1) >= 0.05 else "，差异显著。")) if _pw else ""
+HTML = HTML.replace("__MCNEMAR__", _mc)
+_ts = {a: v.get("temporal_sensitivity", {}).get("either") for a, v in W["arms"].items() if v.get("temporal_sensitivity")}
+_ac = [v for a, v in _ts.items() if a.startswith("agentcore") and v is not None]
+_td = [v for a, v in _ts.items() if a.startswith("tdam") and v is not None]
+_fmt = lambda xs: ((f"{min(xs)}–{max(xs)}" if min(xs) != max(xs) else f"{xs[0]}") + "/17") if xs else "—"  # noqa: E731
+HTML = HTML.replace("__TEMPORAL__", f"AgentCore {_fmt(_ac)}，TDAM {_fmt(_td)}")
 HTML = HTML.replace("__LME_AC__", lme.get("agentcore_spu", "—")).replace("__LME_T1__", lme.get("tdam_l1", "—")).replace(
     "__LME_TF__", lme.get("tdam_full", "—")).replace("__LME_N__", lme.get("none", "—"))
 out.write_text(HTML.replace("__DATA__", json.dumps(DATA, ensure_ascii=False)))
